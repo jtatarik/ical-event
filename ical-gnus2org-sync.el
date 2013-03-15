@@ -25,6 +25,7 @@
 ;;; Code:
 
 (require 'org)
+(require 'org-capture)
 (require 'ical-event)
 
 (defgroup cal-event nil "Settings for Calendar Event gnus/org integration."
@@ -84,6 +85,16 @@
   ""
   :type '(face)
   :group 'cal-event-faces)
+
+(defcustom cal-org-template-name "used by cal-event-mode"
+  "Org-mode template name."
+  :type '(string)
+  :group 'cal-event)
+
+(defcustom cal-org-template-key "#"
+  "Org-mode template hotkey."
+  :type '(char)
+  :group 'cal-event)
 
 
 (defmethod ical->org-repeat ((event cal-event))
@@ -343,16 +354,6 @@ The second value tells whether the event is active."
   (define-key cal-event-mode-map "c" 'cal-event-buffer-cancel)
   (define-key cal-event-mode-map "v" 'cal-event-buffer-show-org-entry))
 
-(defcustom cal-org-template-name "used by cal-event-mode"
-  "Org-mode template name."
-  :type '(string)
-  :group 'cal-event)
-
-(defcustom cal-org-template-key "#"
-  "Org-mode template hotkey."
-  :type '(char)
-  :group 'cal-event)
-
 (defun cal-event-insinuate-org-templates ()
   (unless (cl-find-if (lambda (x) (string= (second x) cal-org-template-name))
                    org-capture-templates)
@@ -365,8 +366,7 @@ The second value tells whether the event is active."
                      :immediate-finish t))
                   org-capture-templates))))
 
-;; TODO: this should go to user's .emacs
-(cal-event-insinuate-org-templates)
+;;(cal-event-insinuate-org-templates)
 
 
 (provide 'ical-gnus2org-sync)
