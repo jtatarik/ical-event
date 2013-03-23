@@ -26,19 +26,46 @@
 
 (require 'ical-event)
 (require 'ical-gnus2org-sync)
+(require 'mm-decode)
 
 (add-to-list 'mm-inlined-types "text/calendar")
 (add-to-list 'mm-automatic-display "text/calendar")
 (add-to-list 'mm-inline-media-tests '("text/calendar" mm-inline-text-calendar identity))
 
 (defun mm-inline-text-calendar (handle)
-  (let ((cal (with-temp-buffer
+  (let ((ical (with-temp-buffer
                (mm-insert-part handle)
                (mm-decode-coding-region (point-min) (point-max) 'utf-8)
                (ical-from-buffer (current-buffer)))))
 
-    (insert (ical->gnus-view cal))))
+    (when ical
+      (insert (ical->gnus-view ical)))))
 
+(defun icalendar-save-part (handle)
+  (when (equal (car (mm-handle-type handle)) "text/calendar")
+    (let ((ical (with-temp-buffer
+                 (mm-insert-part handle)
+                 (mm-decode-coding-region (point-min) (point-max) 'utf-8)
+                 (ical-from-buffer (current-buffer)))))
+
+      ;; FIXME: save on new, sync on existing, cancel on cancel
+      (when ical
+        (org-capture-string (ical->org-entry ical) cal-org-template-key)))))
+
+
+(defun icalendar-save-event ()
+  "Save the Calendar event in the text/calendar part under point."
+  (interactive)
+  (gnus-article-check-buffer)
+  (let ((data (get-text-property (point) 'gnus-data)))
+    (when data
+      (icalendar-save-part data))))
+
+;; FIXME: should go to .emacs
+(require 'gnus-art)
+(add-to-list 'gnus-mime-action-alist
+             (cons "save calendar event" 'icalendar-save-event)
+             t)
 
 (provide 'gnus-calendar)
 ;;; gnus-calendar.el ends here
