@@ -2,7 +2,7 @@
 
 ;; Copyright (C) 2013  Jan Tatarik
 
-;; Author: Jan Tatarik <Jan.Tatarik@xing.com>
+;; Author: Jan Tatarik <Jan.Tatarik@gmail.com>
 ;; Keywords: calendar
 
 ;; This program is free software; you can redistribute it and/or modify
@@ -126,11 +126,16 @@ Returns nil for non-recurring EVENT."
     (let ((event-pos (org-find-entry-with-id (uid event))))
       (when event-pos
         (goto-char event-pos)
-        (let ((entry-end (org-entry-end-position)))
+        (let ((entry-end (org-entry-end-position))
+              (entry-outline-level (org-outline-level)))
           (forward-line)
           (re-search-forward "^ *[^: ]" entry-end)
           (delete-region (point) entry-end)
-          (insert (description event))
+          (save-restriction
+            (narrow-to-region (point) (point))
+            (insert (description event))
+            (indent-region (point-min) (point-max) (1+ entry-outline-level))
+            (fill-region (point-min) (point-max)))
           (org-entry-put event-pos "DT" (ical->org-timestamp event))
           (org-entry-put event-pos "ORGANIZER" (organizer event))
           (org-entry-put event-pos "LOCATION" (location event))
@@ -172,6 +177,29 @@ The second value tells whether the event is active."
                      "%i"
                      :immediate-finish t))
                   org-capture-templates))))
+
+(defun cal-event-save (ical)
+  (with-temp-buffer
+    (org-capture-string (ical->org-entry ical) cal-org-template-key)))
+
+(defun cal-event-update (ical)
+  (org-update-event ical cal-capture-file))
+
+(defun cal-event-cancel (ical)
+  (org-cancel-event (uid ical) cal-capture-file))
+
+(defun cal-event-sync (ical)
+  (let ((org-event-exists (first (org-get-event-status
+                                  (uid ical) cal-capture-file))))
+
+    ;; FIXME: separate classes for request/cancel events, make this (and
+    ;;other) functions methods to simplify the if blocks
+    (if org-event-exists
+        (if (cancel-event-p ical)
+            (cal-event-cancel ical)
+          (cal-event-update ical))
+      (unless (cancel-event-p ical)
+        (cal-event-save ical)))))
 
 
 (provide 'gnus-cal2org-sync)

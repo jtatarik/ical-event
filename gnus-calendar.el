@@ -47,11 +47,13 @@ Method:    %s
 
 (defun ical-from-handle (handle)
   (with-temp-buffer
-    (mm-display-inline handle)
+    (mm-insert-part handle)
+    (mm-decode-coding-region (point-min) (point-max) 'utf-8)
     (ical-from-buffer (current-buffer))))
 
 (defun mm-inline-text-calendar (handle)
   (let ((ical (ical-from-handle handle)))
+
     (when ical
       (insert (ical->gnus-view ical)))))
 
@@ -61,7 +63,7 @@ Method:    %s
 
       ;; FIXME: save on new, sync on existing, cancel on cancel
       (when ical
-        (org-capture-string (ical->org-entry ical) cal-org-template-key)))))
+        (cal-event-sync ical)))))
 
 
 (defun icalendar-save-event ()
@@ -73,6 +75,7 @@ Method:    %s
       (icalendar-save-part data))))
 
 ;; FIXME: should go to .emacs
+;; TODO: offer to show the org entry?
 (require 'gnus-art)
 (add-to-list 'gnus-mime-action-alist
              (cons "save calendar event" 'icalendar-save-event)
