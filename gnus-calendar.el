@@ -25,28 +25,39 @@
 ;;; Code:
 
 (require 'ical-event)
-(require 'ical-gnus2org-sync)
+(require 'gnus-cal2org-sync)
 (require 'mm-decode)
 
 (add-to-list 'mm-inlined-types "text/calendar")
 (add-to-list 'mm-automatic-display "text/calendar")
 (add-to-list 'mm-inline-media-tests '("text/calendar" mm-inline-text-calendar identity))
 
-(defun mm-inline-text-calendar (handle)
-  (let ((ical (with-temp-buffer
-               (mm-insert-part handle)
-               (mm-decode-coding-region (point-min) (point-max) 'utf-8)
-               (ical-from-buffer (current-buffer)))))
+(defmethod ical->gnus-view ((event cal-event))
+  "Format an overview of EVENT details."
+  (with-slots (organizer summary description location recur uid method) event
+    (format "Summary:   %s
+Location:  %s
+Time:      %s
+Organizer: %s
+Method:    %s
 
+%s
+" summary location (ical->org-timestamp event)
+   organizer method description)))
+
+(defun ical-from-handle (handle)
+  (with-temp-buffer
+    (mm-display-inline handle)
+    (ical-from-buffer (current-buffer))))
+
+(defun mm-inline-text-calendar (handle)
+  (let ((ical (ical-from-handle handle)))
     (when ical
       (insert (ical->gnus-view ical)))))
 
 (defun icalendar-save-part (handle)
   (when (equal (car (mm-handle-type handle)) "text/calendar")
-    (let ((ical (with-temp-buffer
-                 (mm-insert-part handle)
-                 (mm-decode-coding-region (point-min) (point-max) 'utf-8)
-                 (ical-from-buffer (current-buffer)))))
+    (let ((ical (ical-from-handle handle)))
 
       ;; FIXME: save on new, sync on existing, cancel on cancel
       (when ical
