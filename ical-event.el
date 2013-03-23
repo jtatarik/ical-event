@@ -29,19 +29,22 @@
 (require 'eieio)
 (require 'cl)
 
+;; TODO: most fields optional, especially when handling different kinds of
+;; methods
+
 (defclass cal-event ()
   ((organizer :initarg :organizer
               :accessor organizer
               :type string)
    (summary :initarg :summary
             :accessor summary
-            :type string)
+            :type string) ;; NULL
    (description :initarg :description
                 :accessor description
-                :type string)
+                :type string) ;; optional, NULL
    (location :initarg :location
              :accessor location
-             :type string)
+             :type string) ;; optional
    (start :initarg :start
           :accessor start
           :type string)
@@ -50,7 +53,7 @@
         :type string)
    (recur :initarg :recur
           :accessor recur
-          :type (or null string))
+          :type (or null string)) ; optional
    (uid :initarg :uid
         :accessor uid
         :type string)
@@ -94,18 +97,33 @@
   "Returns time value of the EVENT end date."
   (date-to-time (end event)))
 
+
+(defun icalendar-decode-datefield (event field zone-map &optional date-style)
+  (let* ((calendar-date-style (or date-style 'european))
+         (date (icalendar--get-event-property event field))
+         (date-zone (icalendar--find-time-zone
+                        (icalendar--get-event-property-attributes
+                         event field)
+                        zone-map))
+         (date-decoded (icalendar--decode-isodatetime date nil date-zone)))
+
+    (concat (icalendar--datetime-to-iso-date date-decoded "-")
+            " "
+            (icalendar--datetime-to-colontime date-decoded))))
+
 (defun icalendar->ical (ical)
-  (let ((event (car (icalendar--all-events ical)))
-        (prop-map '((organizer . ORGANIZER)
-                    (summary . SUMMARY)
-                    (description . DESCRIPTION)
-                    (location . LOCATION)
-                    (start . DTSTART)
-                    (end . DTEND)
-                    (recur . RRULE)
-                    (uid . UID)))
-        (args (list :method (or (third (assoc 'METHOD (third (car (nreverse ical)))))
-                                "PUBLISH"))))
+  (let* ((event (car (icalendar--all-events ical)))
+         (zone-map (icalendar--convert-all-timezones ical))
+         (prop-map '((organizer . ORGANIZER)
+                     (summary . SUMMARY)
+                     (description . DESCRIPTION)
+                     (location . LOCATION)
+                     (recur . RRULE)
+                     (uid . UID)))
+         (args (list :method (or (third (assoc 'METHOD (third (car (nreverse ical)))))
+                                 "PUBLISH")
+                     :start (icalendar-decode-datefield event 'DTSTART zone-map)
+                     :end (icalendar-decode-datefield event 'DTEND zone-map))))
 
     (cl-labels ((map-property (prop)
                               (let ((value (icalendar--get-event-property event prop)))
