@@ -62,6 +62,14 @@
            :type string))
   "iCalendar event class")
 
+(defclass cal-event-request (cal-event)
+  nil
+  "Request iCalendar event")
+
+(defclass cal-event-cancel (cal-event)
+  nil
+  "Cancel iCalendar event")
+
 (defmethod cancel-event-p ((event cal-event))
   (with-slots (method) event
     (and method (string= method "CANCEL"))))
@@ -120,10 +128,15 @@
                      (location . LOCATION)
                      (recur . RRULE)
                      (uid . UID)))
-         (args (list :method (or (third (assoc 'METHOD (third (car (nreverse ical)))))
-                                 "PUBLISH")
+         (method (or (third (assoc 'METHOD (third (car (nreverse ical)))))
+                     "PUBLISH"))
+         (args (list :method method
                      :start (icalendar-decode-datefield event 'DTSTART zone-map)
-                     :end (icalendar-decode-datefield event 'DTEND zone-map))))
+                     :end (icalendar-decode-datefield event 'DTEND zone-map)))
+         (event-class (pcase method
+                        ("REQUEST" 'cal-event-request)
+                        ("CANCEL" 'cal-event-cancel)
+                        (_ 'cal-event))))
 
     (cl-labels ((map-property (prop)
                               (let ((value (icalendar--get-event-property event prop)))
@@ -143,7 +156,7 @@
                                                       args)))))
 
       (mapc #'accumulate-args prop-map)
-      (apply 'make-instance 'cal-event args))))
+      (apply 'make-instance event-class args))))
 
 (defun ical-from-buffer (buf)
   (let ((ical (with-current-buffer (icalendar--get-unfolded-buffer (get-buffer buf))

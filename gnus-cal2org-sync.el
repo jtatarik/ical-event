@@ -151,19 +151,14 @@ Returns nil for non-recurring EVENT."
             (org-entry-put event-pos "DT" (org-deactivate-timestamp ts))
             (save-buffer)))))))
 
-(defun org-get-event-status (id org-file)
-  "Return multiple values.
-The first value tells whether given event ID exists in ORG-FILE.
-The second value tells whether the event is active."
+(defun org-event-exists-p (id org-file)
+  "Return t when given event ID exists in ORG-FILE."
   (save-excursion
     (with-current-buffer (find-file-noselect org-file)
       (let ((event-pos (org-find-entry-with-id id)))
-        (if event-pos
-            (let ((props (org-entry-properties event-pos)))
-              (if (string= (cdr (assoc "ICAL_EVENT" props)) "t")
-                  (values t (not (null (string-match "^<.*>$" (cdr (assoc "DT" props))))))
-                (values nil nil)))
-          (values nil nil))))))
+        (when event-pos
+          (string= (cdr (assoc "ICAL_EVENT" (org-entry-properties event-pos)))
+                   "t"))))))
 
 
 (defun cal-event-insinuate-org-templates ()
@@ -188,18 +183,16 @@ The second value tells whether the event is active."
 (defun cal-event-cancel (ical)
   (org-cancel-event (uid ical) cal-capture-file))
 
-(defun cal-event-sync (ical)
-  (let ((org-event-exists (first (org-get-event-status
-                                  (uid ical) cal-capture-file))))
+(defmethod cal-event-sync ((ical cal-event-request))
+  (if (org-event-exists-p (uid ical) cal-capture-file)
+      (cal-event-update ical)
+    (cal-event-save ical)))
 
-    ;; FIXME: separate classes for request/cancel events, make this (and
-    ;;other) functions methods to simplify the if blocks
-    (if org-event-exists
-        (if (cancel-event-p ical)
-            (cal-event-cancel ical)
-          (cal-event-update ical))
-      (unless (cancel-event-p ical)
-        (cal-event-save ical)))))
+(defmethod cal-event-sync ((ical cal-event-cancel))
+  (when (org-event-exists-p
+         (uid ical) cal-capture-file)
+    (cal-event-cancel ical)))
+
 
 
 (provide 'gnus-cal2org-sync)
