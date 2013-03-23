@@ -32,6 +32,7 @@
 (add-to-list 'mm-automatic-display "text/calendar")
 (add-to-list 'mm-inline-media-tests '("text/calendar" mm-inline-text-calendar identity))
 
+;; TODO: make the template customizable
 (defmethod ical->gnus-view ((event cal-event))
   "Format an overview of EVENT details."
   (with-slots (organizer summary description location recur uid method) event
@@ -58,12 +59,11 @@ Method:    %s
       (insert (ical->gnus-view ical)))))
 
 (defun icalendar-save-part (handle)
-  (when (equal (car (mm-handle-type handle)) "text/calendar")
-    (let ((ical (ical-from-handle handle)))
+  (let (ical)
+    (when (and (equal (car (mm-handle-type handle)) "text/calendar")
+               (setq ical (ical-from-handle handle)))
 
-      ;; FIXME: save on new, sync on existing, cancel on cancel
-      (when ical
-        (cal-event-sync ical)))))
+      (cal-event-sync ical))))
 
 
 (defun icalendar-save-event ()
