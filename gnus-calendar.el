@@ -28,9 +28,6 @@
 (require 'gnus-cal2org-sync)
 (require 'mm-decode)
 
-(add-to-list 'mm-inlined-types "text/calendar")
-(add-to-list 'mm-automatic-display "text/calendar")
-(add-to-list 'mm-inline-media-tests '("text/calendar" mm-inline-text-calendar identity))
 
 ;; TODO: make the template customizable
 (defmethod ical->gnus-view ((event cal-event))
@@ -76,10 +73,15 @@ Method:    %s
 
 ;; FIXME: should go to .emacs
 ;; TODO: offer to show the org entry?
-(require 'gnus-art)
-(add-to-list 'gnus-mime-action-alist
-             (cons "save calendar event" 'icalendar-save-event)
-             t)
+(defun gnus-calendar-setup ()
+  (add-to-list 'mm-inlined-types "text/calendar")
+  (add-to-list 'mm-automatic-display "text/calendar")
+  (add-to-list 'mm-inline-media-tests '("text/calendar" mm-inline-text-calendar identity))
+
+  (require 'gnus-art)
+  (add-to-list 'gnus-mime-action-alist
+               (cons "save calendar event" 'icalendar-save-event)
+               t))
 
 (provide 'gnus-calendar)
 ;;; gnus-calendar.el ends here

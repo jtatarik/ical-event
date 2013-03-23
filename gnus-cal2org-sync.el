@@ -108,6 +108,7 @@ Returns nil for non-recurring EVENT."
       (buffer-substring (point-min) (point-max)))))
 
 (defun org-deactivate-timestamp (ts)
+  ;; FIXME: <..>--<..> ??? is there an org func we can reuse?
   (if (string-match "<\\(.*\\)>$" ts)
       (format "[%s]" (match-string 1 ts))
     ts))
