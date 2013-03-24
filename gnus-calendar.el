@@ -51,10 +51,40 @@ Method:    %s
         (mm-decode-coding-region (point-min) (point-max) 'utf-8))
       (ical-from-buffer (current-buffer)))))
 
+(defun gnus-icalendar-insert-button (text callback data)
+  (let ((start (point)))
+    (gnus-add-text-properties
+     start
+     (progn
+       (insert "[ " text " ]")
+       (point))
+     `(gnus-callback
+       ,callback
+       keymap ,gnus-mime-button-map
+       face ,gnus-article-button-face
+       gnus-data ,data))
+    (widget-convert-button 'link start (point)
+                           :action 'gnus-widget-press-button
+                           :button-keymap gnus-widget-button-keymap)))
+
+(defun gnus-icalendar-accept (ed)
+  (message "Not implemented."))
+
+(defun gnus-icalendar-decline (ed)
+  (message "Not implemented."))
+
 (defun mm-inline-text-calendar (handle)
   (let ((ical (ical-from-handle handle)))
 
     (when ical
+      (when (rsvp ical)
+        (gnus-icalendar-insert-button "Accept" 'gnus-icalendar-accept ical)
+        (insert "    ")
+        (gnus-icalendar-insert-button "Decline" 'gnus-icalendar-decline ical)
+        (insert "    "))
+      ;; TODO: sync to org should be optional, too
+      (gnus-icalendar-insert-button "Export to Org" 'cal-event-sync ical)
+      (insert "\n\n")
       (insert (ical->gnus-view ical)))))
 
 (defun icalendar-save-part (handle)
