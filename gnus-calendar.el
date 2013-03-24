@@ -44,10 +44,12 @@ Method:    %s
    organizer method description)))
 
 (defun ical-from-handle (handle)
-  (with-temp-buffer
-    (mm-insert-part handle)
-    (mm-decode-coding-region (point-min) (point-max) 'utf-8)
-    (ical-from-buffer (current-buffer))))
+  (let ((charset (cdr (assoc 'charset (mm-handle-type handle)))))
+    (with-temp-buffer
+      (mm-insert-part handle)
+      (when (string= charset "utf-8")
+        (mm-decode-coding-region (point-min) (point-max) 'utf-8))
+      (ical-from-buffer (current-buffer)))))
 
 (defun mm-inline-text-calendar (handle)
   (let ((ical (ical-from-handle handle)))
