@@ -28,6 +28,11 @@
 (require 'gnus-cal2org-sync)
 (require 'mm-decode)
 
+(defvar gnus-calendar-identities
+  (cl-mapcan (lambda (x) (if (listp x) x (list x)))
+             (list user-full-name (regexp-quote user-mail-address)
+                   ; NOTE: this one can be a list
+                   gnus-ignored-from-addresses)))
 
 ;; TODO: make the template customizable
 (defmethod ical->gnus-view ((event cal-event))
@@ -43,13 +48,13 @@ Method:    %s
 " summary location (ical->org-timestamp event)
    organizer method description)))
 
-(defun ical-from-handle (handle)
+(defun ical-from-handle (handle &optional attendee-name-or-email)
   (let ((charset (cdr (assoc 'charset (mm-handle-type handle)))))
     (with-temp-buffer
       (mm-insert-part handle)
       (when (string= charset "utf-8")
         (mm-decode-coding-region (point-min) (point-max) 'utf-8))
-      (ical-from-buffer (current-buffer)))))
+      (ical-from-buffer (current-buffer) attendee-name-or-email))))
 
 (defun gnus-icalendar-insert-button (text callback data)
   (let ((start (point)))
@@ -74,7 +79,7 @@ Method:    %s
   (message "Not implemented."))
 
 (defun mm-inline-text-calendar (handle)
-  (let ((ical (ical-from-handle handle)))
+  (let ((ical (ical-from-handle handle gnus-calendar-identities)))
 
     (when ical
       (when (rsvp ical)
@@ -90,7 +95,7 @@ Method:    %s
 (defun icalendar-save-part (handle)
   (let (ical)
     (when (and (equal (car (mm-handle-type handle)) "text/calendar")
-               (setq ical (ical-from-handle handle)))
+               (setq ical (ical-from-handle handle gnus-calendar-identities)))
 
       (cal-event-sync ical))))
 

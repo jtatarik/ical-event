@@ -139,12 +139,15 @@
 
       (cl-find-if (lambda (x)
                     (and (eq (car x) 'ATTENDEE)
-                         (or (string= (attendee-name x) name-or-email)
-                             (string= (attendee-email x) name-or-email))))
+                         (or (member (attendee-name x) name-or-email)
+                             (cl-find-if (lambda (z)
+                                           ;; FIXME: cache (attendee-email)
+                                           (string-match z (attendee-email x)))
+                                         name-or-email))))
                   details))))
 
 
-(defun icalendar->ical (ical)
+(defun icalendar->ical (ical &optional attendee-name-or-email)
   (let* ((event (car (icalendar--all-events ical)))
          (zone-map (icalendar--convert-all-timezones ical))
          (prop-map '((organizer . ORGANIZER)
@@ -154,10 +157,12 @@
                      (recur . RRULE)
                      (uid . UID)))
          (method (third (assoc 'METHOD (third (car (nreverse ical))))))
+         (attendee (when attendee-name-or-email
+                     (find-attendee-by-name-or-email ical attendee-name-or-email)))
          (args (list :method method
                      :start (icalendar-decode-datefield event 'DTSTART zone-map)
                      :end (icalendar-decode-datefield event 'DTEND zone-map)
-                     :rsvp (string= (icalendar--get-event-property event 'RSVP)
+                     :rsvp (string= (plist-get (cadr attendee) 'RSVP)
                                     "TRUE")))
          (event-class (pcase method
                         ("REQUEST" 'cal-event-request)
@@ -184,13 +189,13 @@
       (mapc #'accumulate-args prop-map)
       (apply 'make-instance event-class args))))
 
-(defun ical-from-buffer (buf)
+(defun ical-from-buffer (buf &optional attendee-name-or-email)
   (let ((ical (with-current-buffer (icalendar--get-unfolded-buffer (get-buffer buf))
                 (goto-char (point-min))
                 (icalendar--read-element nil nil))))
 
     (when ical
-      (icalendar->ical ical))))
+      (icalendar->ical ical attendee-name-or-email))))
 
 
 (provide 'ical-event)
