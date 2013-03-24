@@ -200,5 +200,46 @@
       (icalendar->ical ical attendee-name-or-email))))
 
 
+
+(defun event-to-reply (buf)
+  (cl-flet ((extract-block (blockname)
+               (save-excursion
+                 (let ((block-start-re (format "^BEGIN:%s" blockname))
+                       (block-end-re (format "^END:%s" blockname))
+                       start)
+                   (when (re-search-forward block-start-re nil t)
+                     (setq start (line-beginning-position))
+                     (re-search-forward block-end-re)
+                     (buffer-substring-no-properties start (line-beginning-position 2)))))))
+
+    (let (zone event)
+      (with-current-buffer (icalendar--get-unfolded-buffer (get-buffer buf))
+        (goto-char (point-min))
+        (setq zone (extract-block "VTIMEZONE")
+              event (extract-block "VEVENT")))
+
+      ;; FIXME: event is string, so manipulate it first, then simply insert
+      ;;the fixed version, instead of manipulating in-buffer
+      (when event
+        (insert "BEGIN:VCALENDAR\n" "METHOD:REPLY\n")
+        (when zone (insert zone))
+
+        (save-restriction
+          (narrow-to-region (point) (point))
+          (insert event)
+          (save-restriction
+            (goto-char (point-min))
+            (narrow-to-region (line-beginning-position 2)
+                              (save-excursion (goto-char (point-max)) (line-end-position -1)))
+
+            (goto-char (point-min))
+            (while (not (eobp))
+              (if (re-search-forward "^\\(ATTENDEE\\|ORGANIZER\\|DT\\|SUMMARY\\|DURATION\\|UID\\|SEQUENCE\\|RECURRENCE-ID\\)" (line-end-position) t)
+                  (forward-line)
+                (kill-whole-line)))))
+
+        (insert "END:VCALENDAR")))))
+
+
 (provide 'ical-event)
 ;;; ical-event.el ends here
