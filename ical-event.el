@@ -50,10 +50,12 @@
              :type (or null string))
    (start :initarg :start
           :accessor start
-          :type string)
+          :initform ""
+          :type (or null string))
    (end :initarg :end
         :accessor end
-        :type string)
+        :initform ""
+        :type (or null string))
    (recur :initarg :recur
           :accessor recur
           :initform ""

@@ -108,7 +108,6 @@ Method:    %s
     (when data
       (icalendar-save-part data))))
 
-;; FIXME: should go to .emacs
 ;; TODO: offer to show the org entry?
 (defun gnus-calendar-setup ()
   (add-to-list 'mm-inlined-types "text/calendar")
