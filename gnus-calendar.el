@@ -75,6 +75,9 @@ Method:    %s
 (defun gnus-icalendar-accept (ed)
   (message "Not implemented."))
 
+(defun gnus-icalendar-tentative (ed)
+  (message "Not implemented."))
+
 (defun gnus-icalendar-decline (ed)
   (message "Not implemented."))
 
@@ -84,6 +87,8 @@ Method:    %s
     (when ical
       (when (rsvp ical)
         (gnus-icalendar-insert-button "Accept" 'gnus-icalendar-accept ical)
+        (insert "    ")
+        (gnus-icalendar-insert-button "Tentative" 'gnus-icalendar-tentative ical)
         (insert "    ")
         (gnus-icalendar-insert-button "Decline" 'gnus-icalendar-decline ical)
         (insert "    "))
