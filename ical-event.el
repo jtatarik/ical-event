@@ -128,6 +128,22 @@
             " "
             (icalendar--datetime-to-colontime date-decoded))))
 
+(defun find-attendee-by-name-or-email (ical name-or-email)
+  (let* ((event (car (icalendar--all-events ical)))
+         (details (caddr event)))
+    (cl-flet ((attendee-name (att)
+                             (plist-get (cadr att) 'CN))
+              (attendee-email (att)
+                              (string-match "\\(?:MAILTO:\\)?\\(.+\\)" (caddr att))
+                              (match-string 1 (caddr att))))
+
+      (cl-find-if (lambda (x)
+                    (and (eq (car x) 'ATTENDEE)
+                         (or (string= (attendee-name x) name-or-email)
+                             (string= (attendee-email x) name-or-email))))
+                  details))))
+
+
 (defun icalendar->ical (ical)
   (let* ((event (car (icalendar--all-events ical)))
          (zone-map (icalendar--convert-all-timezones ical))
@@ -175,6 +191,7 @@
 
     (when ical
       (icalendar->ical ical))))
+
 
 (provide 'ical-event)
 ;;; ical-event.el ends here
