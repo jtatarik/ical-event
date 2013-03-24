@@ -38,13 +38,16 @@
               :type string)
    (summary :initarg :summary
             :accessor summary
-            :type string) ;; NULL
+            :initform ""
+            :type (or null string))
    (description :initarg :description
                 :accessor description
-                :type string) ;; optional, NULL
+                :initform ""
+                :type (or null string))
    (location :initarg :location
              :accessor location
-             :type string) ;; optional
+             :initform ""
+             :type (or null string))
    (start :initarg :start
           :accessor start
           :type string)
@@ -53,13 +56,19 @@
         :type string)
    (recur :initarg :recur
           :accessor recur
-          :type (or null string)) ; optional
+          :initform ""
+          :type (or null string))
    (uid :initarg :uid
         :accessor uid
         :type string)
    (method :initarg :method
            :accessor method
-           :type string))
+           :initform "PUBLISH"
+           :type (or null string))
+   (rsvp :initarg :rsvp
+         :accessor rsvp
+         :initform nil
+         :type (or null boolean)))
   "iCalendar event class")
 
 (defclass cal-event-request (cal-event)
@@ -128,11 +137,12 @@
                      (location . LOCATION)
                      (recur . RRULE)
                      (uid . UID)))
-         (method (or (third (assoc 'METHOD (third (car (nreverse ical)))))
-                     "PUBLISH"))
+         (method (third (assoc 'METHOD (third (car (nreverse ical))))))
          (args (list :method method
                      :start (icalendar-decode-datefield event 'DTSTART zone-map)
-                     :end (icalendar-decode-datefield event 'DTEND zone-map)))
+                     :end (icalendar-decode-datefield event 'DTEND zone-map)
+                     :rsvp (string= (icalendar--get-event-property event 'RSVP)
+                                    "TRUE")))
          (event-class (pcase method
                         ("REQUEST" 'cal-event-request)
                         ("CANCEL" 'cal-event-cancel)
