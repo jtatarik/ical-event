@@ -200,6 +200,38 @@
       (icalendar->ical ical attendee-name-or-email))))
 
 
+(defun make-reply-event (event)
+  (let (reply-event-lines)
+    (cl-flet ((process-event-line (line)
+                 (when (string-match "^\\([^;:]+\\)" line)
+                  (let* ((key (match-string 0 line))
+                         ;; NOTE: not all of the below fields are mandatory,
+                         ;; but they are present in MS Exchange replies. Need
+                         ;; to test with minimalistic setup, too.
+                         (new-line (pcase key
+                                     ("ATTENDEE" line) ; TODO: filter out the
+                                        ; attendee, set PARTSTAT
+                                     ("ORGANIZER" line)
+                                     ("SUMMARY" line) ; TODO: inject Accepted/Declined
+                                     ("DTSTART" line)
+                                     ("DTEND" line)
+                                     ("LOCATION" line)
+                                     ("DTSTAMP" line) ; TODO: update?
+                                     ("DURATION" line)
+                                     ("SEQUENCE" line)
+                                     ("RECURRENCE-ID" line)
+                                     ("UID" line)
+                                     (_ nil))))
+                    (when new-line
+                      (push new-line reply-event-lines))))))
+
+      (mapc #'process-event-line
+            (split-string event "\n"))
+
+      (concat
+       "BEGIN:VEVENT\n"
+       (mapconcat #'identity (nreverse reply-event-lines) "\n")
+       "\nEND:VEVENT\n"))))
 
 (defun event-to-reply (buf)
   (cl-flet ((extract-block (blockname)
@@ -218,27 +250,13 @@
         (setq zone (extract-block "VTIMEZONE")
               event (extract-block "VEVENT")))
 
-      ;; FIXME: event is string, so manipulate it first, then simply insert
-      ;;the fixed version, instead of manipulating in-buffer
       (when event
-        (insert "BEGIN:VCALENDAR\n" "METHOD:REPLY\n")
-        (when zone (insert zone))
-
-        (save-restriction
-          (narrow-to-region (point) (point))
-          (insert event)
-          (save-restriction
-            (goto-char (point-min))
-            (narrow-to-region (line-beginning-position 2)
-                              (save-excursion (goto-char (point-max)) (line-end-position -1)))
-
-            (goto-char (point-min))
-            (while (not (eobp))
-              (if (re-search-forward "^\\(ATTENDEE\\|ORGANIZER\\|DT\\|SUMMARY\\|DURATION\\|UID\\|SEQUENCE\\|RECURRENCE-ID\\)" (line-end-position) t)
-                  (forward-line)
-                (kill-whole-line)))))
-
-        (insert "END:VCALENDAR")))))
+        (concat
+         "BEGIN:VCALENDAR\n"
+         "METHOD:REPLY\n"
+         zone
+         (make-reply-event event)
+         "END:VCALENDAR\n")))))
 
 
 (provide 'ical-event)
