@@ -36,7 +36,7 @@
                    gnus-ignored-from-addresses)))
 
 ;; TODO: make the template customizable
-(defmethod ical->gnus-view ((event cal-event))
+(defmethod ical->gnus-view ((event ical-event))
   "Format an overview of EVENT details."
   (with-slots (organizer summary description location recur uid method) event
     (format "Summary:   %s

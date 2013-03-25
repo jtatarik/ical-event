@@ -32,7 +32,7 @@
 ;; TODO: most fields optional, especially when handling different kinds of
 ;; methods
 
-(defclass cal-event ()
+(defclass ical-event ()
   ((organizer :initarg :organizer
               :accessor organizer
               :type string)
@@ -73,33 +73,33 @@
          :type (or null boolean)))
   "iCalendar event class")
 
-(defclass cal-event-request (cal-event)
+(defclass ical-event-request (ical-event)
   nil
   "Request iCalendar event")
 
-(defclass cal-event-cancel (cal-event)
+(defclass ical-event-cancel (ical-event)
   nil
   "Cancel iCalendar event")
 
-(defmethod cancel-event-p ((event cal-event))
+(defmethod cancel-event-p ((event ical-event))
   (with-slots (method) event
     (and method (string= method "CANCEL"))))
 
-(defmethod request-event-p ((event cal-event))
+(defmethod request-event-p ((event ical-event))
   (with-slots (method) event
     (and method (string= method "REQUEST"))))
 
-(defmethod recurring-p ((event cal-event))
+(defmethod recurring-p ((event ical-event))
   "Returns `t' if EVENT is recurring."
   (not (null (recur event))))
 
-(defmethod recurring-freq ((event cal-event))
+(defmethod recurring-freq ((event ical-event))
   "Returns recurring frequency for EVENT."
   (let ((rrule (recur event)))
     (string-match "FREQ=\\([[:alpha:]]+\\)" rrule)
     (match-string 1 rrule)))
 
-(defmethod recurring-interval ((event cal-event))
+(defmethod recurring-interval ((event ical-event))
   "Returns recurring interval for EVENT."
   (let ((rrule (recur event))
         (default-interval 1))
@@ -108,11 +108,11 @@
     (or (match-string 1 rrule)
         default-interval)))
 
-(defmethod start-time ((event cal-event))
+(defmethod start-time ((event ical-event))
   "Returns time value of the EVENT start date."
   (date-to-time (start event)))
 
-(defmethod end-time ((event cal-event))
+(defmethod end-time ((event ical-event))
   "Returns time value of the EVENT end date."
   (date-to-time (end event)))
 
@@ -169,9 +169,9 @@
                      :rsvp (string= (plist-get (cadr attendee) 'RSVP)
                                     "TRUE")))
          (event-class (pcase method
-                        ("REQUEST" 'cal-event-request)
-                        ("CANCEL" 'cal-event-cancel)
-                        (_ 'cal-event))))
+                        ("REQUEST" 'ical-event-request)
+                        ("CANCEL" 'ical-event-cancel)
+                        (_ 'ical-event))))
 
     (cl-labels ((map-property (prop)
                               (let ((value (icalendar--get-event-property event prop)))

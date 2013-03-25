@@ -29,31 +29,31 @@
 (require 'ical-event)
 
 
-(defgroup cal-event nil "Settings for Calendar Event gnus/org integration."
+(defgroup ical-event nil "Settings for Calendar Event gnus/org integration."
   :group 'calendar
   :prefix "cal")
 
 (defcustom cal-capture-file nil
   "Target Org file for storing captured calendar events."
   :type '(file)
-  :group 'cal-event)
+  :group 'ical-event)
 
 (defcustom cal-capture-headline nil
   "Target outline in `cal-capture-file' for storing captured events."
   :type '(repeat string)
-  :group 'cal-event)
+  :group 'ical-event)
 
-(defcustom cal-org-template-name "used by cal-event-mode"
+(defcustom cal-org-template-name "used by gnus-cal2org-sync"
   "Org-mode template name."
   :type '(string)
-  :group 'cal-event)
+  :group 'ical-event)
 
 (defcustom cal-org-template-key "#"
   "Org-mode template hotkey."
   :type '(char)
-  :group 'cal-event)
+  :group 'ical-event)
 
-(defmethod ical->org-repeat ((event cal-event))
+(defmethod ical->org-repeat ((event ical-event))
   "Builds `org-mode' repeater string for EVENT.
 Returns nil for non-recurring EVENT."
   (when (recurring-p event)
@@ -67,7 +67,7 @@ Returns nil for non-recurring EVENT."
       (when org-freq
         (format "+%s%s" (recurring-interval event) org-freq)))))
 
-(defmethod ical->org-timestamp ((event cal-event))
+(defmethod ical->org-timestamp ((event ical-event))
   "Builds `org-mode' timestamp from EVENT start/end dates, and recurrence info."
   (let* ((start (start-time event))
          (end (end-time event))
@@ -81,7 +81,7 @@ Returns nil for non-recurring EVENT."
         (format "<%s %s-%s %s>" start-date start-time end-time repeat)
       (format "<%s %s>--<%s %s>" start-date start-time end-date end-time))))
 
-(defmethod ical->org-entry ((event cal-event))
+(defmethod ical->org-entry ((event ical-event))
   "Formats new entry from EVENT."
   (with-temp-buffer
     (org-mode)
@@ -184,12 +184,12 @@ Returns nil for non-recurring EVENT."
 (defun cal-event-cancel (ical)
   (org-cancel-event (uid ical) cal-capture-file))
 
-(defmethod cal-event-sync ((ical cal-event-request))
+(defmethod cal-event-sync ((ical ical-event-request))
   (if (org-event-exists-p (uid ical) cal-capture-file)
       (cal-event-update ical)
     (cal-event-save ical)))
 
-(defmethod cal-event-sync ((ical cal-event-cancel))
+(defmethod cal-event-sync ((ical ical-event-cancel))
   (when (org-event-exists-p
          (uid ical) cal-capture-file)
     (cal-event-cancel ical)))
