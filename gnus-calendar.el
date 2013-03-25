@@ -27,6 +27,7 @@
 (require 'ical-event)
 (require 'gnus-cal2org-sync)
 (require 'mm-decode)
+(require 'gnus-sum)
 
 (defvar gnus-calendar-identities
   (cl-mapcan (lambda (x) (if (listp x) x (list x)))
@@ -48,13 +49,20 @@ Method:    %s
 " summary location (ical->org-timestamp event)
    organizer method description)))
 
+(defmacro with-buffer-from-handle (handle &rest body)
+  (let ((charset (make-symbol "charset")))
+    `(let ((,charset (cdr (assoc 'charset (mm-handle-type ,handle)))))
+       (with-temp-buffer
+         (mm-insert-part ,handle)
+         (when (string= ,charset "utf-8")
+           (mm-decode-coding-region (point-min) (point-max) 'utf-8))
+
+         ,@body))))
+
+
 (defun ical-from-handle (handle &optional attendee-name-or-email)
-  (let ((charset (cdr (assoc 'charset (mm-handle-type handle)))))
-    (with-temp-buffer
-      (mm-insert-part handle)
-      (when (string= charset "utf-8")
-        (mm-decode-coding-region (point-min) (point-max) 'utf-8))
-      (ical-from-buffer (current-buffer) attendee-name-or-email))))
+  (with-buffer-from-handle handle
+      (ical-from-buffer (current-buffer) attendee-name-or-email)))
 
 (defun gnus-icalendar-insert-button (text callback data)
   (let ((start (point)))
@@ -73,17 +81,12 @@ Method:    %s
                            :button-keymap gnus-widget-button-keymap)))
 
 (defun gnus-icalendar-reply (data)
-  (let ((handle (first data))
-        (status (second data)))
+  (let* ((handle (first data))
+         (status (second data))
+         (reply (with-buffer-from-handle handle
+                   (event-to-reply (current-buffer) status gnus-calendar-identities))))
 
-  ;; FIXME: duplicates code from ical-from-handle
-    (let ((charset (cdr (assoc 'charset (mm-handle-type handle)))))
-      (with-temp-buffer
-        (mm-insert-part handle)
-        (when (string= charset "utf-8")
-          (mm-decode-coding-region (point-min) (point-max) 'utf-8))
-
-        (message (event-to-reply (current-buffer) status gnus-calendar-identities))))))
+    (message reply)))
 
 
 (defun mm-inline-text-calendar (handle)
