@@ -86,6 +86,7 @@ Method:    %s
          (reply (with-buffer-from-handle handle
                    (event-to-reply (current-buffer) status gnus-calendar-identities))))
 
+    ;; TODO: create new message, attach the reply, send to event organizer
     (message reply)))
 
 
