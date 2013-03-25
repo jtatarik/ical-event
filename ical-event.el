@@ -134,10 +134,9 @@
   (let* ((event (car (icalendar--all-events ical)))
          (details (caddr event)))
     (cl-flet ((attendee-name (att)
-                             (plist-get (cadr att) 'CN))
+                (plist-get (cadr att) 'CN))
               (attendee-email (att)
-                              (string-match "\\(?:MAILTO:\\)?\\(.+\\)" (caddr att))
-                              (match-string 1 (caddr att))))
+                (replace-regexp-in-string "^.*MAILTO:" "" (caddr att))))
 
       (cl-find-if (lambda (x)
                     (and (eq (car x) 'ATTENDEE)
