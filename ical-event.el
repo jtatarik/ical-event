@@ -200,23 +200,36 @@
       (icalendar->ical ical attendee-name-or-email))))
 
 
-(defun make-reply-event (event)
+(defun build-reply-event-body (event status identity)
   (let (reply-event-lines)
-    (cl-flet ((process-event-line (line)
+    (cl-labels ((update-summary (line)
+                (if (string-match "^[^:]+:" line)
+                 (replace-match (format "\\&%s: " status) t nil line)
+                 line))
+              (update-dtstamp ()
+                (format-time-string "DTSTAMP:%Y%m%dT%H%M%SZ" nil t))
+              (attendee-matches-identity (line)
+                (cl-find-if (lambda (name)
+                              (string-match name line))
+                            identity))
+              (update-attendee-status (line)
+                (when (and (attendee-matches-identity line)
+                           (string-match "\\(PARTSTAT=\\)[^;]+" line))
+                  (replace-match (format "\\1%s" "ACCEPTED") t nil line)))
+              (process-event-line (line)
                  (when (string-match "^\\([^;:]+\\)" line)
                   (let* ((key (match-string 0 line))
                          ;; NOTE: not all of the below fields are mandatory,
                          ;; but they are present in MS Exchange replies. Need
                          ;; to test with minimalistic setup, too.
                          (new-line (pcase key
-                                     ("ATTENDEE" line) ; TODO: filter out the
-                                        ; attendee, set PARTSTAT
+                                     ("ATTENDEE" (update-attendee-status line))
                                      ("ORGANIZER" line)
-                                     ("SUMMARY" line) ; TODO: inject Accepted/Declined
+                                     ("SUMMARY" (update-summary line))
                                      ("DTSTART" line)
                                      ("DTEND" line)
                                      ("LOCATION" line)
-                                     ("DTSTAMP" line) ; TODO: update?
+                                     ("DTSTAMP" (update-dtstamp))
                                      ("DURATION" line)
                                      ("SEQUENCE" line)
                                      ("RECURRENCE-ID" line)
@@ -228,12 +241,16 @@
       (mapc #'process-event-line
             (split-string event "\n"))
 
+      (unless (cl-find-if (lambda (x) (string-match "^ATTENDEE" x))
+                          reply-event-lines)
+        (error "Could not find an event attendee matching given identity"))
+
       (concat
        "BEGIN:VEVENT\n"
        (mapconcat #'identity (nreverse reply-event-lines) "\n")
        "\nEND:VEVENT\n"))))
 
-(defun event-to-reply (buf)
+(defun event-to-reply (buf status identity)
   (cl-flet ((extract-block (blockname)
                (save-excursion
                  (let ((block-start-re (format "^BEGIN:%s" blockname))
@@ -255,7 +272,7 @@
          "BEGIN:VCALENDAR\n"
          "METHOD:REPLY\n"
          zone
-         (make-reply-event event)
+         (build-reply-event-body event status identity)
          "END:VCALENDAR\n")))))
 
 
