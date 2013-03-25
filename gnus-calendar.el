@@ -72,29 +72,43 @@ Method:    %s
                            :action 'gnus-widget-press-button
                            :button-keymap gnus-widget-button-keymap)))
 
-(defun gnus-icalendar-accept (ed)
-  (message "Not implemented."))
+(defun gnus-icalendar-reply (data)
+  (let ((handle (first data))
+        (status (second data)))
 
-(defun gnus-icalendar-tentative (ed)
-  (message "Not implemented."))
+  ;; FIXME: duplicates code from ical-from-handle
+    (let ((charset (cdr (assoc 'charset (mm-handle-type handle)))))
+      (with-temp-buffer
+        (mm-insert-part handle)
+        (when (string= charset "utf-8")
+          (mm-decode-coding-region (point-min) (point-max) 'utf-8))
 
-(defun gnus-icalendar-decline (ed)
-  (message "Not implemented."))
+        (message (event-to-reply (current-buffer) status gnus-calendar-identities))))))
+
 
 (defun mm-inline-text-calendar (handle)
-  (let ((ical (ical-from-handle handle gnus-calendar-identities)))
+  (let ((ical (ical-from-handle handle gnus-calendar-identities))
+        buttons)
 
     (when ical
       (when (rsvp ical)
-        (gnus-icalendar-insert-button "Accept" 'gnus-icalendar-accept ical)
-        (insert "    ")
-        (gnus-icalendar-insert-button "Tentative" 'gnus-icalendar-tentative ical)
-        (insert "    ")
-        (gnus-icalendar-insert-button "Decline" 'gnus-icalendar-decline ical)
-        (insert "    "))
-      ;; TODO: sync to org should be optional, too
-      (gnus-icalendar-insert-button "Export to Org" 'cal-event-sync ical)
-      (insert "\n\n")
+        (setq buttons (append `(("Accept" gnus-icalendar-reply (,handle accepted))
+                                ("Tentative" gnus-icalendar-reply (,handle tentative))
+                                ("Decline" gnus-icalendar-reply (,handle declined)))
+                              buttons)))
+
+      ;; TODO: sync to org should be an optional feature, too
+      (when t
+        (setq buttons (append buttons
+                              (list `("Export to Org" cal-event-sync ,ical)))))
+
+      (when buttons
+        (mapc (lambda (x)
+                (apply 'gnus-icalendar-insert-button x)
+                (insert "    "))
+              buttons)
+        (insert "\n\n"))
+
       (insert (ical->gnus-view ical)))))
 
 (defun icalendar-save-part (handle)
