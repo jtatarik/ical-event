@@ -29,6 +29,15 @@
 (require 'mm-decode)
 (require 'gnus-sum)
 
+;; FIXME: better separate reply/sync functionalities
+;; FIXME: configurable reply temp buffer name
+
+;; (defcustom cal-bufname "*CAL*"
+;;   "Buffer name for displaying calendar event details."
+;;   :type '(string)
+;;   :group 'cal-event)
+
+
 (defvar gnus-calendar-identities
   (cl-mapcan (lambda (x) (if (listp x) x (list x)))
              (list user-full-name (regexp-quote user-mail-address)
