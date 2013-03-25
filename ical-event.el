@@ -201,10 +201,12 @@
 
 
 (defun build-reply-event-body (event status identity)
-  (let (reply-event-lines)
+  (let ((summary-status (capitalize (symbol-name status)))
+        (attendee-status (upcase (symbol-name status)))
+        reply-event-lines)
     (cl-labels ((update-summary (line)
                 (if (string-match "^[^:]+:" line)
-                 (replace-match (format "\\&%s: " status) t nil line)
+                 (replace-match (format "\\&%s: " summary-status) t nil line)
                  line))
               (update-dtstamp ()
                 (format-time-string "DTSTAMP:%Y%m%dT%H%M%SZ" nil t))
@@ -215,7 +217,7 @@
               (update-attendee-status (line)
                 (when (and (attendee-matches-identity line)
                            (string-match "\\(PARTSTAT=\\)[^;]+" line))
-                  (replace-match (format "\\1%s" "ACCEPTED") t nil line)))
+                  (replace-match (format "\\1%s" attendee-status) t nil line)))
               (process-event-line (line)
                  (when (string-match "^\\([^;:]+\\)" line)
                   (let* ((key (match-string 0 line))
@@ -251,6 +253,9 @@
        "\nEND:VEVENT\n"))))
 
 (defun event-to-reply (buf status identity)
+  "Build a calendar event reply for request contained in BUF.
+The reply will have STATUS (accepted, tentative, declined).
+The reply will be composed for attendees matching IDENTITY."
   (cl-flet ((extract-block (blockname)
                (save-excursion
                  (let ((block-start-re (format "^BEGIN:%s" blockname))
