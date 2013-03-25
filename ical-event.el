@@ -152,8 +152,10 @@
 (defun icalendar->ical (ical &optional attendee-name-or-email)
   (let* ((event (car (icalendar--all-events ical)))
          (zone-map (icalendar--convert-all-timezones ical))
-         (prop-map '((organizer . ORGANIZER)
-                     (summary . SUMMARY)
+         (organizer (replace-regexp-in-string
+                     "^.*MAILTO:" ""
+                     (icalendar--get-event-property event 'ORGANIZER)))
+         (prop-map '((summary . SUMMARY)
                      (description . DESCRIPTION)
                      (location . LOCATION)
                      (recur . RRULE)
@@ -162,6 +164,7 @@
          (attendee (when attendee-name-or-email
                      (find-attendee-by-name-or-email ical attendee-name-or-email)))
          (args (list :method method
+                     :organizer organizer
                      :start (icalendar-decode-datefield event 'DTSTART zone-map)
                      :end (icalendar-decode-datefield event 'DTEND zone-map)
                      :rsvp (string= (plist-get (cadr attendee) 'RSVP)
