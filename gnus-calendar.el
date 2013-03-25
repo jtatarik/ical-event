@@ -80,14 +80,35 @@ Method:    %s
                            :action 'gnus-widget-press-button
                            :button-keymap gnus-widget-button-keymap)))
 
+(defun send-buffer-by-mail (buffer-name recipient subject)
+  (compose-mail)
+  (message-goto-body)
+  (mml-attach-buffer buffer-name "text/calendar" nil "attachment")
+  (message-goto-to)
+  (insert recipient)
+  (message-goto-subject)
+  (insert subject)
+  ;(message-send-and-exit)
+  )
+
 (defun gnus-icalendar-reply (data)
   (let* ((handle (first data))
          (status (second data))
+         (ical (third data))
          (reply (with-buffer-from-handle handle
                    (event-to-reply (current-buffer) status gnus-calendar-identities))))
 
     ;; TODO: create new message, attach the reply, send to event organizer
-    (message reply)))
+    (when reply
+      (let ((subject (concat (capitalize (symbol-name status))
+                             ": " (summary ical)))
+            (organizer (organizer ical)))
+
+        (message reply)
+        (with-current-buffer (get-buffer-create "*CAL*")
+          (delete-region (point-min) (point-max))
+          (insert reply)
+          (send-buffer-by-mail (buffer-name) organizer subject))))))
 
 
 (defun mm-inline-text-calendar (handle)
@@ -96,9 +117,9 @@ Method:    %s
 
     (when ical
       (when (rsvp ical)
-        (setq buttons (append `(("Accept" gnus-icalendar-reply (,handle accepted))
-                                ("Tentative" gnus-icalendar-reply (,handle tentative))
-                                ("Decline" gnus-icalendar-reply (,handle declined)))
+        (setq buttons (append `(("Accept" gnus-icalendar-reply (,handle accepted ,ical))
+                                ("Tentative" gnus-icalendar-reply (,handle tentative ,ical))
+                                ("Decline" gnus-icalendar-reply (,handle declined ,ical)))
                               buttons)))
 
       ;; TODO: sync to org should be an optional feature, too
