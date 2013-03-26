@@ -278,6 +278,8 @@ The reply will be composed for attendees matching IDENTITY."
         (concat
          "BEGIN:VCALENDAR\n"
          "METHOD:REPLY\n"
+         "PRODID:Gnus\n"
+         "VERSION:2.0\n"
          zone
          (build-reply-event-body event status identity)
          "END:VCALENDAR\n")))))
