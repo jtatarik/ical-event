@@ -184,6 +184,9 @@ Returns nil for non-recurring EVENT."
 (defun cal-event-cancel (ical)
   (org-cancel-event (uid ical) cal-capture-file))
 
+(defun cal-event-show-org-entry (ical)
+  (org-show-event ical cal-capture-file))
+
 (defmethod cal-event-sync ((ical ical-event-request))
   (if (org-event-exists-p (uid ical) cal-capture-file)
       (cal-event-update ical)

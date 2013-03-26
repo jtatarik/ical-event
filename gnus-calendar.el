@@ -107,7 +107,6 @@ Method:    %s
          (reply (with-buffer-from-handle handle
                    (event-to-reply (current-buffer) status gnus-calendar-identities))))
 
-    ;; TODO: create new message, attach the reply, send to event organizer
     (when reply
       (let ((subject (concat (capitalize (symbol-name status))
                              ": " (summary ical)))
@@ -134,7 +133,8 @@ Method:    %s
       ;; TODO: sync to org should be an optional feature, too
       (when t
         (setq buttons (append buttons
-                              (list `("Export to Org" cal-event-sync ,ical)))))
+                              `(("Export to Org" cal-event-sync ,ical)
+                                ("Show Org Entry" cal-event-show-org-entry ,ical)))))
 
       (when buttons
         (mapc (lambda (x)
