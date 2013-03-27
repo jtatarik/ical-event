@@ -53,7 +53,7 @@
   :type '(char)
   :group 'ical-event)
 
-(defmethod ical->org-repeat ((event ical-event))
+(defmethod ical-event:org-repeat ((event ical-event))
   "Builds `org-mode' timestamp repeater string for EVENT.
 Returns nil for non-recurring EVENT."
   (when (ical-event:recurring-p event)
@@ -67,7 +67,7 @@ Returns nil for non-recurring EVENT."
       (when org-freq
         (format "+%s%s" (ical-event:recurring-interval event) org-freq)))))
 
-(defmethod ical->org-timestamp ((event ical-event))
+(defmethod ical-event:org-timestamp ((event ical-event))
   "Builds `org-mode' timestamp from EVENT start/end dates, and recurrence info."
   (let* ((start (ical-event:start-time event))
          (end (ical-event:end-time event))
@@ -75,14 +75,14 @@ Returns nil for non-recurring EVENT."
          (start-time (format-time-string "%H:%M" start t))
          (end-date (format-time-string "%Y-%m-%d %a" end t))
          (end-time (format-time-string "%H:%M" end t))
-         (org-repeat (ical->org-repeat event))
+         (org-repeat (ical-event:org-repeat event))
          (repeat (if org-repeat (concat " " org-repeat) "")))
 
     (if (equal start-date end-date)
         (format "<%s %s-%s%s>" start-date start-time end-time repeat)
       (format "<%s %s>--<%s %s>" start-date start-time end-date end-time))))
 
-(defmethod ical->org-entry ((event ical-event))
+(defmethod ical-event->org-entry ((event ical-event))
   "Formats new entry from EVENT."
   (with-temp-buffer
     (org-mode)
@@ -90,7 +90,7 @@ Returns nil for non-recurring EVENT."
                            recur uid) event
       (let ((props `(("ICAL_EVENT" . "t")
                      ("ID" . ,uid)
-                     ("DT" . ,(ical->org-timestamp event))
+                     ("DT" . ,(ical-event:org-timestamp event))
                      ("ORGANIZER" . ,(ical-event:organizer event))
                      ("LOCATION" . ,(ical-event:location event))
                      ("RRULE" . ,(ical-event:recur event)))))
@@ -108,12 +108,12 @@ Returns nil for non-recurring EVENT."
 
       (buffer-string))))
 
-(defun org-deactivate-timestamp (ts)
+(defun gnus-calendar--deactivate-org-timestamp (ts)
   (replace-regexp-in-string "[<>]"
                             (lambda (m) (pcase m ("<" "[") (">" "]")))
                             ts))
 
-(defun org-show-event (event org-file)
+(defun gnus-calendar--show-org-event (event org-file)
   (let (event-pos)
     (with-current-buffer (find-file-noselect org-file)
       (setq event-pos (org-find-entry-with-id (ical-event:uid event))))
@@ -122,37 +122,38 @@ Returns nil for non-recurring EVENT."
       (goto-char event-pos)
       (org-show-entry))))
 
-(defun org-update-event (event org-file)
+(defun gnus-calendar--update-org-event (event org-file)
+  (with-current-buffer (find-file-noselect org-file)
+    (with-slots (uid description organizer location recur) event
+      (let ((event-pos (org-find-entry-with-id uid)))
+        (when event-pos
+          (goto-char event-pos)
+          (let ((entry-end (org-entry-end-position))
+                (entry-outline-level (org-outline-level)))
+            (forward-line)
+            (re-search-forward "^ *[^: ]" entry-end)
+            (delete-region (point) entry-end)
+            (save-restriction
+              (narrow-to-region (point) (point))
+              (insert description)
+              (indent-region (point-min) (point-max) (1+ entry-outline-level))
+              (fill-region (point-min) (point-max)))
+            (org-entry-put event-pos "DT" (ical-event:org-timestamp event))
+            (org-entry-put event-pos "ORGANIZER" organizer)
+            (org-entry-put event-pos "LOCATION" location)
+            (org-entry-put event-pos "RRULE" recur)
+            (save-buffer)))))))
+
+(defun gnus-calendar--cancel-org-event (event org-file)
   (with-current-buffer (find-file-noselect org-file)
     (let ((event-pos (org-find-entry-with-id (ical-event:uid event))))
       (when event-pos
-        (goto-char event-pos)
-        (let ((entry-end (org-entry-end-position))
-              (entry-outline-level (org-outline-level)))
-          (forward-line)
-          (re-search-forward "^ *[^: ]" entry-end)
-          (delete-region (point) entry-end)
-          (save-restriction
-            (narrow-to-region (point) (point))
-            (insert (ical-event:description event))
-            (indent-region (point-min) (point-max) (1+ entry-outline-level))
-            (fill-region (point-min) (point-max)))
-          (org-entry-put event-pos "DT" (ical->org-timestamp event))
-          (org-entry-put event-pos "ORGANIZER" (ical-event:organizer event))
-          (org-entry-put event-pos "LOCATION" (ical-event:location event))
-          (org-entry-put event-pos "RRULE" (ical-event:recur event))
-          (save-buffer))))))
-
-(defun org-cancel-event (id org-file)
-  (with-current-buffer (find-file-noselect org-file)
-    (let ((event-pos (org-find-entry-with-id id)))
-      (when event-pos
         (let ((ts (org-entry-get event-pos "DT")))
           (when ts
-            (org-entry-put event-pos "DT" (org-deactivate-timestamp ts))
+            (org-entry-put event-pos "DT" (gnus-calendar--deactivate-org-timestamp ts))
             (save-buffer)))))))
 
-(defun org-event-exists-p (id org-file)
+(defun gnus-calendar-org-event-exists-p (id org-file)
   "Return t when given event ID exists in ORG-FILE."
   (save-excursion
     (with-current-buffer (find-file-noselect org-file)
@@ -162,7 +163,7 @@ Returns nil for non-recurring EVENT."
                    "t"))))))
 
 
-(defun cal-event-insinuate-org-templates ()
+(defun gnus-calendar-insinuate-org-templates ()
   (unless (cl-find-if (lambda (x) (string= (second x) cal-org-template-name))
                       org-capture-templates)
     (setq org-capture-templates
@@ -174,28 +175,28 @@ Returns nil for non-recurring EVENT."
                      :immediate-finish t))
                   org-capture-templates))))
 
-(defun cal-event-save (ical)
+(defun gnus-calendar:org-event-save (event)
   (with-temp-buffer
-    (org-capture-string (ical->org-entry ical) cal-org-template-key)))
+    (org-capture-string (ical-event->org-entry event) cal-org-template-key)))
 
-(defun cal-event-update (ical)
-  (org-update-event ical cal-capture-file))
+(defun gnus-calendar:org-event-update (event)
+  (gnus-calendar--update-org-event event cal-capture-file))
 
-(defun cal-event-cancel (ical)
-  (org-cancel-event (ical-event:uid ical) cal-capture-file))
+(defun gnus-calendar:org-event-cancel (event)
+  (gnus-calendar--cancel-org-event event cal-capture-file))
 
-(defun cal-event-show-org-entry (ical)
-  (org-show-event ical cal-capture-file))
+(defun gnus-calendar-show-org-entry (event)
+  (gnus-calendar--show-org-event event cal-capture-file))
 
-(defmethod cal-event-sync ((ical ical-event-request))
-  (if (org-event-exists-p (ical-event:uid ical) cal-capture-file)
-      (cal-event-update ical)
-    (cal-event-save ical)))
+(defmethod cal-event:sync-to-org ((event ical-event-request))
+  (if (gnus-calendar-org-event-exists-p (ical-event:uid event) cal-capture-file)
+      (gnus-calendar:org-event-update event)
+    (gnus-calendar:org-event-save event)))
 
-(defmethod cal-event-sync ((ical ical-event-cancel))
-  (when (org-event-exists-p
-         (ical-event:uid ical) cal-capture-file)
-    (cal-event-cancel ical)))
+(defmethod cal-event:sync-to-org ((event ical-event-cancel))
+  (when (gnus-calendar-org-event-exists-p
+         (ical-event:uid event) cal-capture-file)
+    (gnus-calendar:org-event-cancel event)))
 
 
 

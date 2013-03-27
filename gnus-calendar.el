@@ -51,7 +51,7 @@
   (with-slots (organizer summary description location recur uid method) event
     (let ((headers `(("Summary" ,summary)
                      ("Location" ,location)
-                     ("Time" ,(ical->org-timestamp event))
+                     ("Time" ,(ical-event:org-timestamp event))
                      ("Organizer" ,organizer)
                      ("Method" ,method))))
 
@@ -141,8 +141,8 @@
       ;; TODO: sync to org should be an optional feature, too
       (when t
         (setq buttons (append buttons
-                              `(("Export to Org" cal-event-sync ,event)
-                                ("Show Org Entry" cal-event-show-org-entry ,event)))))
+                              `(("Export to Org" cal-event:sync-to-org ,event)
+                                ("Show Org Entry" gnus-calendar-show-org-entry ,event)))))
 
       (when buttons
         (mapc (lambda (x)
@@ -158,7 +158,7 @@
     (when (and (equal (car (mm-handle-type handle)) "text/calendar")
                (setq event (ical-event-from-handle handle gnus-calendar-identities)))
 
-      (cal-event-sync event))))
+      (cal-event:sync-to-org event))))
 
 
 (defun gnus-calendar-save-event ()
