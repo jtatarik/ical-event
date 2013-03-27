@@ -46,7 +46,7 @@
                    gnus-ignored-from-addresses)))
 
 ;; TODO: make the template customizable
-(defmethod ical->gnus-view ((event ical-event))
+(defmethod ical-event->gnus-calendar ((event ical-event))
   "Format an overview of EVENT details."
   (with-slots (organizer summary description location recur uid method) event
     (let ((headers `(("Summary" ,summary)
@@ -64,7 +64,8 @@
        "\n"
        description))))
 
-(defmacro with-buffer-from-handle (handle &rest body)
+(defmacro with-decoded-handle (handle &rest body)
+  "Execute BODY in buffer containing the decoded contents of HANDLE."
   (let ((charset (make-symbol "charset")))
     `(let ((,charset (cdr (assoc 'charset (mm-handle-type ,handle)))))
        (with-temp-buffer
@@ -75,11 +76,11 @@
          ,@body))))
 
 
-(defun ical-from-handle (handle &optional attendee-name-or-email)
-  (with-buffer-from-handle handle
+(defun ical-event-from-handle (handle &optional attendee-name-or-email)
+  (with-decoded-handle handle
       (ical-event-from-buffer (current-buffer) attendee-name-or-email)))
 
-(defun gnus-icalendar-insert-button (text callback data)
+(defun gnus-calendar-insert-button (text callback data)
   (let ((start (point)))
     (gnus-add-text-properties
      start
@@ -95,7 +96,7 @@
                            :action 'gnus-widget-press-button
                            :button-keymap gnus-widget-button-keymap)))
 
-(defun send-buffer-by-mail (buffer-name recipient subject)
+(defun gnus-calendar-send-buffer-by-mail (buffer-name recipient subject)
   (compose-mail)
   (message-goto-body)
   (mml-attach-buffer buffer-name "text/calendar" nil "attachment")
@@ -106,76 +107,77 @@
   ;(message-send-and-exit)
   )
 
-(defun gnus-icalendar-reply (data)
+(defun gnus-calendar-reply (data)
   (let* ((handle (first data))
          (status (second data))
-         (ical (third data))
-         (reply (with-buffer-from-handle handle
-                   (ical-event-reply-from-buffer (current-buffer) status gnus-calendar-identities))))
+         (event (third data))
+         (reply (with-decoded-handle handle
+                   (ical-event-reply-from-buffer (current-buffer)
+                                                 status gnus-calendar-identities))))
 
     (when reply
       (let ((subject (concat (capitalize (symbol-name status))
-                             ": " (summary ical)))
-            (organizer (ical-event:organizer ical)))
+                             ": " (summary event)))
+            (organizer (ical-event:organizer event)))
 
         (message reply)
         (with-current-buffer (get-buffer-create "*CAL*")
           (delete-region (point-min) (point-max))
           (insert reply)
-          (send-buffer-by-mail (buffer-name) organizer subject))))))
+          (gnus-calendar-send-buffer-by-mail (buffer-name) organizer subject))))))
 
 
-(defun mm-inline-text-calendar (handle)
-  (let ((ical (ical-from-handle handle gnus-calendar-identities))
+(defun gnus-calendar-mm-inline (handle)
+  (let ((event (ical-event-from-handle handle gnus-calendar-identities))
         buttons)
 
-    (when ical
-      (when (ical-event:rsvp ical)
-        (setq buttons (append `(("Accept" gnus-icalendar-reply (,handle accepted ,ical))
-                                ("Tentative" gnus-icalendar-reply (,handle tentative ,ical))
-                                ("Decline" gnus-icalendar-reply (,handle declined ,ical)))
+    (when event
+      (when (ical-event:rsvp event)
+        (setq buttons (append `(("Accept" gnus-calendar-reply (,handle accepted ,event))
+                                ("Tentative" gnus-calendar-reply (,handle tentative ,event))
+                                ("Decline" gnus-calendar-reply (,handle declined ,event)))
                               buttons)))
 
       ;; TODO: sync to org should be an optional feature, too
       (when t
         (setq buttons (append buttons
-                              `(("Export to Org" cal-event-sync ,ical)
-                                ("Show Org Entry" cal-event-show-org-entry ,ical)))))
+                              `(("Export to Org" cal-event-sync ,event)
+                                ("Show Org Entry" cal-event-show-org-entry ,event)))))
 
       (when buttons
         (mapc (lambda (x)
-                (apply 'gnus-icalendar-insert-button x)
+                (apply 'gnus-calendar-insert-button x)
                 (insert "    "))
               buttons)
         (insert "\n\n"))
 
-      (insert (ical->gnus-view ical)))))
+      (insert (ical-event->gnus-calendar event)))))
 
-(defun icalendar-save-part (handle)
-  (let (ical)
+(defun gnus-calendar-save-part (handle)
+  (let (event)
     (when (and (equal (car (mm-handle-type handle)) "text/calendar")
-               (setq ical (ical-from-handle handle gnus-calendar-identities)))
+               (setq event (ical-event-from-handle handle gnus-calendar-identities)))
 
-      (cal-event-sync ical))))
+      (cal-event-sync event))))
 
 
-(defun icalendar-save-event ()
+(defun gnus-calendar-save-event ()
   "Save the Calendar event in the text/calendar part under point."
   (interactive)
   (gnus-article-check-buffer)
   (let ((data (get-text-property (point) 'gnus-data)))
     (when data
-      (icalendar-save-part data))))
+      (gnus-calendar-save-part data))))
 
 ;; TODO: offer to show the org entry?
 (defun gnus-calendar-setup ()
   (add-to-list 'mm-inlined-types "text/calendar")
   (add-to-list 'mm-automatic-display "text/calendar")
-  (add-to-list 'mm-inline-media-tests '("text/calendar" mm-inline-text-calendar identity))
+  (add-to-list 'mm-inline-media-tests '("text/calendar" gnus-calendar-mm-inline identity))
 
   (require 'gnus-art)
   (add-to-list 'gnus-mime-action-alist
-               (cons "save calendar event" 'icalendar-save-event)
+               (cons "save calendar event" 'gnus-calendar-save-event)
                t))
 
 (provide 'gnus-calendar)
