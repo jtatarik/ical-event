@@ -54,7 +54,7 @@
   :group 'ical-event)
 
 (defmethod ical->org-repeat ((event ical-event))
-  "Builds `org-mode' repeater string for EVENT.
+  "Builds `org-mode' timestamp repeater string for EVENT.
 Returns nil for non-recurring EVENT."
   (when (recurring-p event)
     (let* ((freq-map '(("HOURLY" . "h")
@@ -75,10 +75,11 @@ Returns nil for non-recurring EVENT."
          (start-time (format-time-string "%H:%M" start t))
          (end-date (format-time-string "%Y-%m-%d %a" end t))
          (end-time (format-time-string "%H:%M" end t))
-         (repeat (or (ical->org-repeat event) "")))
+         (org-repeat (ical->org-repeat event))
+         (repeat (if org-repeat (concat " " org-repeat) "")))
 
     (if (equal start-date end-date)
-        (format "<%s %s-%s %s>" start-date start-time end-time repeat)
+        (format "<%s %s-%s%s>" start-date start-time end-time repeat)
       (format "<%s %s>--<%s %s>" start-date start-time end-date end-time))))
 
 (defmethod ical->org-entry ((event ical-event))
@@ -105,13 +106,12 @@ Returns nil for non-recurring EVENT."
         (indent-region (point-min) (point-max) 2)
         (fill-region (point-min) (point-max)))
 
-      (buffer-substring (point-min) (point-max)))))
+      (buffer-string))))
 
 (defun org-deactivate-timestamp (ts)
-  ;; FIXME: <..>--<..> ??? is there an org func we can reuse?
-  (if (string-match "<\\(.*\\)>$" ts)
-      (format "[%s]" (match-string 1 ts))
-    ts))
+  (replace-regexp-in-string "[<>]"
+                            (lambda (m) (pcase m ("<" "[") (">" "]")))
+                            ts))
 
 (defun org-show-event (event org-file)
   (let (event-pos)
