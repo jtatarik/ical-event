@@ -76,7 +76,7 @@
 
 (defun ical-from-handle (handle &optional attendee-name-or-email)
   (with-buffer-from-handle handle
-      (ical-from-buffer (current-buffer) attendee-name-or-email)))
+      (ical-event-from-buffer (current-buffer) attendee-name-or-email)))
 
 (defun gnus-icalendar-insert-button (text callback data)
   (let ((start (point)))

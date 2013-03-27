@@ -106,12 +106,12 @@
   (date-to-time (ical-event:end event)))
 
 
-(defun icalendar-decode-datefield (event field zone-map &optional date-style)
+(defun ical-event--decode-datefield (ical field zone-map &optional date-style)
   (let* ((calendar-date-style (or date-style 'european))
-         (date (icalendar--get-event-property event field))
+         (date (icalendar--get-event-property ical field))
          (date-zone (icalendar--find-time-zone
                         (icalendar--get-event-property-attributes
-                         event field)
+                         ical field)
                         zone-map))
          (date-decoded (icalendar--decode-isodatetime date nil date-zone)))
 
@@ -119,25 +119,25 @@
             " "
             (icalendar--datetime-to-colontime date-decoded))))
 
-(defun find-attendee-by-name-or-email (ical name-or-email)
+(defun ical-event--find-attendee (ical name-or-email)
   (let* ((event (car (icalendar--all-events ical)))
-         (details (caddr event)))
-    (cl-flet ((attendee-name (att)
-                (plist-get (cadr att) 'CN))
-              (attendee-email (att)
-                (replace-regexp-in-string "^.*MAILTO:" "" (caddr att))))
+         (event-props (caddr event)))
+    (cl-labels ((attendee-name (att)
+                  (plist-get (cadr att) 'CN))
+                (attendee-email (att)
+                  (replace-regexp-in-string "^.*MAILTO:" "" (caddr att)))
+                (attendee-prop-matches (prop)
+                   (and (eq (car prop) 'ATTENDEE)
+                        (or (member (attendee-name prop) name-or-email)
+                            (let ((att-email (attendee-email prop)))
+                              (cl-find-if (lambda (email)
+                                            (string-match email att-email))
+                                          name-or-email))))))
 
-      (cl-find-if (lambda (x)
-                    (and (eq (car x) 'ATTENDEE)
-                         (or (member (attendee-name x) name-or-email)
-                             (cl-find-if (lambda (z)
-                                           ;; FIXME: cache (attendee-email)
-                                           (string-match z (attendee-email x)))
-                                         name-or-email))))
-                  details))))
+      (cl-find-if #'attendee-prop-matches event-props))))
 
 
-(defun icalendar->ical (ical &optional attendee-name-or-email)
+(defun icalendar->ical-event (ical &optional attendee-name-or-email)
   (let* ((event (car (icalendar--all-events ical)))
          (zone-map (icalendar--convert-all-timezones ical))
          (organizer (replace-regexp-in-string
@@ -150,11 +150,11 @@
                      (uid . UID)))
          (method (third (assoc 'METHOD (third (car (nreverse ical))))))
          (attendee (when attendee-name-or-email
-                     (find-attendee-by-name-or-email ical attendee-name-or-email)))
+                     (ical-event--find-attendee ical attendee-name-or-email)))
          (args (list :method method
                      :organizer organizer
-                     :start (icalendar-decode-datefield event 'DTSTART zone-map)
-                     :end (icalendar-decode-datefield event 'DTEND zone-map)
+                     :start (ical-event--decode-datefield event 'DTSTART zone-map)
+                     :end (ical-event--decode-datefield event 'DTEND zone-map)
                      :rsvp (string= (plist-get (cadr attendee) 'RSVP)
                                     "TRUE")))
          (event-class (pcase method
@@ -182,13 +182,13 @@
       (mapc #'accumulate-args prop-map)
       (apply 'make-instance event-class args))))
 
-(defun ical-from-buffer (buf &optional attendee-name-or-email)
+(defun ical-event-from-buffer (buf &optional attendee-name-or-email)
   (let ((ical (with-current-buffer (icalendar--get-unfolded-buffer (get-buffer buf))
                 (goto-char (point-min))
                 (icalendar--read-element nil nil))))
 
     (when ical
-      (icalendar->ical ical attendee-name-or-email))))
+      (icalendar->ical-event ical attendee-name-or-email))))
 
 
 (defun build-reply-event-body (event status identity)
@@ -196,52 +196,45 @@
         (attendee-status (upcase (symbol-name status)))
         reply-event-lines)
     (cl-labels ((update-summary (line)
-                (if (string-match "^[^:]+:" line)
-                 (replace-match (format "\\&%s: " summary-status) t nil line)
-                 line))
-              (update-dtstamp ()
-                (format-time-string "DTSTAMP:%Y%m%dT%H%M%SZ" nil t))
-              (attendee-matches-identity (line)
-                (cl-find-if (lambda (name)
-                              (string-match name line))
-                            identity))
-              (update-attendee-status (line)
-                (when (and (attendee-matches-identity line)
-                           (string-match "\\(PARTSTAT=\\)[^;]+" line))
-                  (replace-match (format "\\1%s" attendee-status) t nil line)))
-              (process-event-line (line)
-                 (when (string-match "^\\([^;:]+\\)" line)
-                  (let* ((key (match-string 0 line))
-                         ;; NOTE: not all of the below fields are mandatory,
-                         ;; but they are present in MS Exchange replies. Need
-                         ;; to test with minimalistic setup, too.
-                         (new-line (pcase key
-                                     ("ATTENDEE" (update-attendee-status line))
-                                     ("ORGANIZER" line)
-                                     ("SUMMARY" (update-summary line))
-                                     ("DTSTART" line)
-                                     ("DTEND" line)
-                                     ("LOCATION" line)
-                                     ("DTSTAMP" (update-dtstamp))
-                                     ("DURATION" line)
-                                     ("SEQUENCE" line)
-                                     ("RECURRENCE-ID" line)
-                                     ("UID" line)
-                                     (_ nil))))
-                    (when new-line
-                      (push new-line reply-event-lines))))))
+                  (if (string-match "^[^:]+:" line)
+                      (replace-match (format "\\&%s: " summary-status) t nil line)
+                    line))
+                (update-dtstamp ()
+                  (format-time-string "DTSTAMP:%Y%m%dT%H%M%SZ" nil t))
+                (attendee-matches-identity (line)
+                  (cl-find-if (lambda (name) (string-match-p name line))
+                              identity))
+                (update-attendee-status (line)
+                  (when (and (attendee-matches-identity line)
+                             (string-match "\\(PARTSTAT=\\)[^;]+" line))
+                    (replace-match (format "\\1%s" attendee-status) t nil line)))
+                (process-event-line (line)
+                  (when (string-match "^\\([^;:]+\\)" line)
+                    (let* ((key (match-string 0 line))
+                           ;; NOTE: not all of the below fields are mandatory,
+                           ;; but they are present in MS Exchange replies. Need
+                           ;; to test with minimalistic setup, too.
+                           (new-line (pcase key
+                                       ("ATTENDEE" (update-attendee-status line))
+                                       ("SUMMARY" (update-summary line))
+                                       ("DTSTAMP" (update-dtstamp))
+                                       ((or "ORGANIZER" "DTSTART" "DTEND"
+                                            "LOCATION" "DURATION" "SEQUENCE"
+                                            "RECURRENCE-ID" "UID") line)
+                                       (_ nil))))
+                      (when new-line
+                        (push new-line reply-event-lines))))))
 
-      (mapc #'process-event-line
-            (split-string event "\n"))
+      (mapc #'process-event-line (split-string event "\n"))
 
       (unless (cl-find-if (lambda (x) (string-match "^ATTENDEE" x))
                           reply-event-lines)
         (error "Could not find an event attendee matching given identity"))
 
-      (concat
-       "BEGIN:VEVENT\n"
-       (mapconcat #'identity (nreverse reply-event-lines) "\n")
-       "\nEND:VEVENT\n"))))
+      (mapconcat #'identity `("BEGIN:VEVENT"
+                              ,@(nreverse reply-event-lines)
+                              "END:VEVENT\n")
+                 "\n"))))
 
 (defun event-to-reply (buf status identity)
   "Build a calendar event reply for request contained in BUF.
