@@ -56,21 +56,21 @@
 (defmethod ical->org-repeat ((event ical-event))
   "Builds `org-mode' timestamp repeater string for EVENT.
 Returns nil for non-recurring EVENT."
-  (when (recurring-p event)
+  (when (ical-event:recurring-p event)
     (let* ((freq-map '(("HOURLY" . "h")
                        ("DAILY" . "d")
                        ("WEEKLY" . "w")
                        ("MONTHLY" . "m")
                        ("YEARLY" . "y")))
-           (org-freq (cdr (assoc (recurring-freq event) freq-map))))
+           (org-freq (cdr (assoc (ical-event:recurring-freq event) freq-map))))
 
       (when org-freq
-        (format "+%s%s" (recurring-interval event) org-freq)))))
+        (format "+%s%s" (ical-event:recurring-interval event) org-freq)))))
 
 (defmethod ical->org-timestamp ((event ical-event))
   "Builds `org-mode' timestamp from EVENT start/end dates, and recurrence info."
-  (let* ((start (start-time event))
-         (end (end-time event))
+  (let* ((start (ical-event:start-time event))
+         (end (ical-event:end-time event))
          (start-date (format-time-string "%Y-%m-%d %a" start t))
          (start-time (format-time-string "%H:%M" start t))
          (end-date (format-time-string "%Y-%m-%d %a" end t))
@@ -91,9 +91,9 @@ Returns nil for non-recurring EVENT."
       (let ((props `(("ICAL_EVENT" . "t")
                      ("ID" . ,uid)
                      ("DT" . ,(ical->org-timestamp event))
-                     ("ORGANIZER" . ,(organizer event))
-                     ("LOCATION" . ,(location event))
-                     ("RRULE" . ,(recur event)))))
+                     ("ORGANIZER" . ,(ical-event:organizer event))
+                     ("LOCATION" . ,(ical-event:location event))
+                     ("RRULE" . ,(ical-event:recur event)))))
 
         (insert (format "* %s (%s)\n\n" summary location))
         (mapc (lambda (prop)
@@ -116,7 +116,7 @@ Returns nil for non-recurring EVENT."
 (defun org-show-event (event org-file)
   (let (event-pos)
     (with-current-buffer (find-file-noselect org-file)
-      (setq event-pos (org-find-entry-with-id (uid event))))
+      (setq event-pos (org-find-entry-with-id (ical-event:uid event))))
     (when event-pos
       (switch-to-buffer (find-file org-file))
       (goto-char event-pos)
@@ -124,7 +124,7 @@ Returns nil for non-recurring EVENT."
 
 (defun org-update-event (event org-file)
   (with-current-buffer (find-file-noselect org-file)
-    (let ((event-pos (org-find-entry-with-id (uid event))))
+    (let ((event-pos (org-find-entry-with-id (ical-event:uid event))))
       (when event-pos
         (goto-char event-pos)
         (let ((entry-end (org-entry-end-position))
@@ -134,13 +134,13 @@ Returns nil for non-recurring EVENT."
           (delete-region (point) entry-end)
           (save-restriction
             (narrow-to-region (point) (point))
-            (insert (description event))
+            (insert (ical-event:description event))
             (indent-region (point-min) (point-max) (1+ entry-outline-level))
             (fill-region (point-min) (point-max)))
           (org-entry-put event-pos "DT" (ical->org-timestamp event))
-          (org-entry-put event-pos "ORGANIZER" (organizer event))
-          (org-entry-put event-pos "LOCATION" (location event))
-          (org-entry-put event-pos "RRULE" (recur event))
+          (org-entry-put event-pos "ORGANIZER" (ical-event:organizer event))
+          (org-entry-put event-pos "LOCATION" (ical-event:location event))
+          (org-entry-put event-pos "RRULE" (ical-event:recur event))
           (save-buffer))))))
 
 (defun org-cancel-event (id org-file)
@@ -182,19 +182,19 @@ Returns nil for non-recurring EVENT."
   (org-update-event ical cal-capture-file))
 
 (defun cal-event-cancel (ical)
-  (org-cancel-event (uid ical) cal-capture-file))
+  (org-cancel-event (ical-event:uid ical) cal-capture-file))
 
 (defun cal-event-show-org-entry (ical)
   (org-show-event ical cal-capture-file))
 
 (defmethod cal-event-sync ((ical ical-event-request))
-  (if (org-event-exists-p (uid ical) cal-capture-file)
+  (if (org-event-exists-p (ical-event:uid ical) cal-capture-file)
       (cal-event-update ical)
     (cal-event-save ical)))
 
 (defmethod cal-event-sync ((ical ical-event-cancel))
   (when (org-event-exists-p
-         (uid ical) cal-capture-file)
+         (ical-event:uid ical) cal-capture-file)
     (cal-event-cancel ical)))
 
 

@@ -1,4 +1,4 @@
-;;; ical-event.el --- Calendar Event Object
+;;; ical-event.el --- iCalendar Event Object
 
 ;; Copyright (C) 2013  Jan Tatarik
 
@@ -29,92 +29,81 @@
 (require 'eieio)
 (require 'cl)
 
-;; TODO: most fields optional, especially when handling different kinds of
-;; methods
-
 (defclass ical-event ()
   ((organizer :initarg :organizer
-              :accessor organizer
+              :accessor ical-event:organizer
               :type string)
    (summary :initarg :summary
             :accessor summary
             :initform ""
             :type (or null string))
    (description :initarg :description
-                :accessor description
+                :accessor ical-event:description
                 :initform ""
                 :type (or null string))
    (location :initarg :location
-             :accessor location
+             :accessor ical-event:location
              :initform ""
              :type (or null string))
    (start :initarg :start
-          :accessor start
+          :accessor ical-event:start
           :initform ""
           :type (or null string))
    (end :initarg :end
-        :accessor end
+        :accessor ical-event:end
         :initform ""
         :type (or null string))
    (recur :initarg :recur
-          :accessor recur
+          :accessor ical-event:recur
           :initform ""
           :type (or null string))
    (uid :initarg :uid
-        :accessor uid
+        :accessor ical-event:uid
         :type string)
    (method :initarg :method
-           :accessor method
+           :accessor ical-event:method
            :initform "PUBLISH"
            :type (or null string))
    (rsvp :initarg :rsvp
-         :accessor rsvp
+         :accessor ical-event:rsvp
          :initform nil
          :type (or null boolean)))
-  "iCalendar event class")
+  "iCalendar Event class")
 
 (defclass ical-event-request (ical-event)
   nil
-  "Request iCalendar event")
+  "iCalendar Request Event class")
 
 (defclass ical-event-cancel (ical-event)
   nil
-  "Cancel iCalendar event")
+  "iCalendar Cancel Event class")
 
-(defmethod cancel-event-p ((event ical-event))
-  (with-slots (method) event
-    (and method (string= method "CANCEL"))))
-
-(defmethod request-event-p ((event ical-event))
-  (with-slots (method) event
-    (and method (string= method "REQUEST"))))
-
-(defmethod recurring-p ((event ical-event))
+(defmethod ical-event:recurring-p ((event ical-event))
   "Returns `t' if EVENT is recurring."
-  (not (null (recur event))))
+  (not (null (ical-event:recur event))))
 
-(defmethod recurring-freq ((event ical-event))
+(defmethod ical-event:recurring-freq ((event ical-event))
   "Returns recurring frequency for EVENT."
-  (let ((rrule (recur event)))
+  (let ((rrule (ical-event:recur event)))
     (string-match "FREQ=\\([[:alpha:]]+\\)" rrule)
     (match-string 1 rrule)))
 
-(defmethod recurring-interval ((event ical-event))
+(defmethod ical-event:recurring-interval ((event ical-event))
   "Returns recurring interval for EVENT."
-  (let ((rrule (recur event))
+  (let ((rrule (ical-event:recur event))
         (default-interval 1))
 
     (string-match "INTERVAL=\\([[:digit:]]+\\)" rrule)
     (or (match-string 1 rrule)
         default-interval)))
 
-(defmethod start-time ((event ical-event))
+(defmethod ical-event:start-time ((event ical-event))
   "Returns time value of the EVENT start date."
-  (date-to-time (start event)))
+  (date-to-time (ical-event:start event)))
 
-(defmethod end-time ((event ical-event))
+(defmethod ical-event:end-time ((event ical-event))
   "Returns time value of the EVENT end date."
-  (date-to-time (end event)))
+  (date-to-time (ical-event:end event)))
 
 
 (defun icalendar-decode-datefield (event field zone-map &optional date-style)

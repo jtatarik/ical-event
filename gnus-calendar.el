@@ -115,7 +115,7 @@
     (when reply
       (let ((subject (concat (capitalize (symbol-name status))
                              ": " (summary ical)))
-            (organizer (organizer ical)))
+            (organizer (ical-event:organizer ical)))
 
         (message reply)
         (with-current-buffer (get-buffer-create "*CAL*")
@@ -129,7 +129,7 @@
         buttons)
 
     (when ical
-      (when (rsvp ical)
+      (when (ical-event:rsvp ical)
         (setq buttons (append `(("Accept" gnus-icalendar-reply (,handle accepted ,ical))
                                 ("Tentative" gnus-icalendar-reply (,handle tentative ,ical))
                                 ("Decline" gnus-icalendar-reply (,handle declined ,ical)))
