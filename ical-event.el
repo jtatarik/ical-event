@@ -27,7 +27,7 @@
 
 (require 'icalendar)
 (require 'eieio)
-(require 'cl)
+(require 'cl-lib)
 
 (defclass ical-event ()
   ((organizer :initarg :organizer
@@ -189,82 +189,6 @@
 
     (when ical
       (icalendar->ical-event ical attendee-name-or-email))))
-
-
-(defun build-reply-event-body (event status identity)
-  (let ((summary-status (capitalize (symbol-name status)))
-        (attendee-status (upcase (symbol-name status)))
-        reply-event-lines)
-    (cl-labels ((update-summary (line)
-                  (if (string-match "^[^:]+:" line)
-                      (replace-match (format "\\&%s: " summary-status) t nil line)
-                    line))
-                (update-dtstamp ()
-                  (format-time-string "DTSTAMP:%Y%m%dT%H%M%SZ" nil t))
-                (attendee-matches-identity (line)
-                  (cl-find-if (lambda (name) (string-match-p name line))
-                              identity))
-                (update-attendee-status (line)
-                  (when (and (attendee-matches-identity line)
-                             (string-match "\\(PARTSTAT=\\)[^;]+" line))
-                    (replace-match (format "\\1%s" attendee-status) t nil line)))
-                (process-event-line (line)
-                  (when (string-match "^\\([^;:]+\\)" line)
-                    (let* ((key (match-string 0 line))
-                           ;; NOTE: not all of the below fields are mandatory,
-                           ;; but they are present in MS Exchange replies. Need
-                           ;; to test with minimalistic setup, too.
-                           (new-line (pcase key
-                                       ("ATTENDEE" (update-attendee-status line))
-                                       ("SUMMARY" (update-summary line))
-                                       ("DTSTAMP" (update-dtstamp))
-                                       ((or "ORGANIZER" "DTSTART" "DTEND"
-                                            "LOCATION" "DURATION" "SEQUENCE"
-                                            "RECURRENCE-ID" "UID") line)
-                                       (_ nil))))
-                      (when new-line
-                        (push new-line reply-event-lines))))))
-
-      (mapc #'process-event-line (split-string event "\n"))
-
-      (unless (cl-find-if (lambda (x) (string-match "^ATTENDEE" x))
-                          reply-event-lines)
-        (error "Could not find an event attendee matching given identity"))
-
-      (mapconcat #'identity `("BEGIN:VEVENT"
-                              ,@(nreverse reply-event-lines)
-                              "END:VEVENT\n")
-                 "\n"))))
-
-(defun event-to-reply (buf status identity)
-  "Build a calendar event reply for request contained in BUF.
-The reply will have STATUS (accepted, tentative, declined).
-The reply will be composed for attendees matching IDENTITY."
-  (cl-flet ((extract-block (blockname)
-               (save-excursion
-                 (let ((block-start-re (format "^BEGIN:%s" blockname))
-                       (block-end-re (format "^END:%s" blockname))
-                       start)
-                   (when (re-search-forward block-start-re nil t)
-                     (setq start (line-beginning-position))
-                     (re-search-forward block-end-re)
-                     (buffer-substring-no-properties start (line-beginning-position 2)))))))
-
-    (let (zone event)
-      (with-current-buffer (icalendar--get-unfolded-buffer (get-buffer buf))
-        (goto-char (point-min))
-        (setq zone (extract-block "VTIMEZONE")
-              event (extract-block "VEVENT")))
-
-      (when event
-        (concat
-         "BEGIN:VCALENDAR\n"
-         "METHOD:REPLY\n"
-         "PRODID:Gnus\n"
-         "VERSION:2.0\n"
-         zone
-         (build-reply-event-body event status identity)
-         "END:VCALENDAR\n")))))
 
 
 (provide 'ical-event)

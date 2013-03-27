@@ -25,6 +25,7 @@
 ;;; Code:
 
 (require 'ical-event)
+(require 'ical-event-reply)
 (require 'gnus-cal2org-sync)
 (require 'mm-decode)
 (require 'gnus-sum)
@@ -110,7 +111,7 @@
          (status (second data))
          (ical (third data))
          (reply (with-buffer-from-handle handle
-                   (event-to-reply (current-buffer) status gnus-calendar-identities))))
+                   (ical-event-reply-from-buffer (current-buffer) status gnus-calendar-identities))))
 
     (when reply
       (let ((subject (concat (capitalize (symbol-name status))
