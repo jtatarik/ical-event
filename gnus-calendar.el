@@ -48,15 +48,20 @@
 (defmethod ical->gnus-view ((event ical-event))
   "Format an overview of EVENT details."
   (with-slots (organizer summary description location recur uid method) event
-    (format "Summary:   %s
-Location:  %s
-Time:      %s
-Organizer: %s
-Method:    %s
+    (let ((headers `(("Summary" ,summary)
+                     ("Location" ,location)
+                     ("Time" ,(ical->org-timestamp event))
+                     ("Organizer" ,organizer)
+                     ("Method" ,method))))
 
-%s
-" summary location (ical->org-timestamp event)
-   organizer method description)))
+      (concat
+       (apply #'concat (mapcar (lambda (x)
+                                 (format "%-12s%s\n"
+                                         (propertize (concat (car x) ":") 'face 'bold)
+                                         (cadr x)))
+                               headers))
+       "\n"
+       description))))
 
 (defmacro with-buffer-from-handle (handle &rest body)
   (let ((charset (make-symbol "charset")))
