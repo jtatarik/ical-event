@@ -3,7 +3,7 @@
 ;; Copyright (C) 2013  Jan Tatarik
 
 ;; Author: Jan Tatarik <Jan.Tatarik@gmail.com>
-;; Keywords: calendar
+;; Keywords: icalendar
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
