@@ -54,6 +54,9 @@
   :type '(string)
   :group 'gnus-calendar-org)
 
+(defvar gnus-calendar-org-enabled-p nil)
+
+
 (defmethod ical-event:org-repeat ((event ical-event))
   "Builds `org-mode' timestamp repeater string for EVENT.
 Returns nil for non-recurring EVENT."
@@ -199,7 +202,12 @@ Returns nil for non-recurring EVENT."
          (ical-event:uid event) gnus-calendar-org-capture-file)
     (gnus-calendar:org-event-cancel event)))
 
-
+(defun gnus-calendar-org-setup ()
+  (if (and gnus-calendar-org-capture-file gnus-calendar-org-capture-headline)
+      (progn
+        (gnus-calendar-insinuate-org-templates)
+        (setq gnus-calendar-org-enabled-p t))
+    (message "Cannot enable Calendar->Org: missing capture file, headline")))
 
 (provide 'gnus-calendar-org)
 ;;; gnus-calendar-org.el ends here

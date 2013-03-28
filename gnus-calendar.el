@@ -142,8 +142,7 @@
                                 ("Decline" gnus-calendar-reply (,handle declined ,event)))
                               buttons)))
 
-      ;; TODO: sync to org should be an optional feature, too
-      (when t
+      (when gnus-calendar-org-enabled-p
         (setq buttons (append buttons
                               `(("Export to Org" cal-event:sync-to-org ,event)
                                 ("Show Org Entry" gnus-calendar-show-org-entry ,event)))))
@@ -173,7 +172,6 @@
     (when data
       (gnus-calendar-save-part data))))
 
-;; TODO: offer to show the org entry?
 (defun gnus-calendar-setup ()
   (add-to-list 'mm-inlined-types "text/calendar")
   (add-to-list 'mm-automatic-display "text/calendar")
