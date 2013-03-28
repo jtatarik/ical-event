@@ -34,7 +34,7 @@
 (defgroup gnus-calendar nil
   "Settings for inline display of iCalendar events."
   :group 'gnus-article
-  :prefix "gnus-calendar")
+  :prefix "gnus-calendar-")
 
 (defcustom gnus-calendar-reply-bufname "*CAL*"
   "Buffer used for building iCalendar reply."

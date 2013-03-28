@@ -32,7 +32,7 @@
 (defgroup gnus-calendar-org nil
   "Settings for Calendar Event gnus/org integration."
   :group 'gnus-calendar
-  :prefix "gnus-calendar-org")
+  :prefix "gnus-calendar-org-")
 
 (defcustom gnus-calendar-org-capture-file nil
   "Target Org file for storing captured calendar events."
