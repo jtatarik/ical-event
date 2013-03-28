@@ -29,29 +29,30 @@
 (require 'ical-event)
 
 
-(defgroup ical-event nil "Settings for Calendar Event gnus/org integration."
-  :group 'calendar
-  :prefix "cal")
+(defgroup gnus-calendar-org-sync nil
+  "Settings for Calendar Event gnus/org integration."
+  :group 'gnus-calendar
+  :prefix "gnus-calendar-org")
 
-(defcustom cal-capture-file nil
+(defcustom gnus-calendar-org-capture-file nil
   "Target Org file for storing captured calendar events."
   :type '(file)
-  :group 'ical-event)
+  :group 'gnus-calendar-org-sync)
 
-(defcustom cal-capture-headline nil
-  "Target outline in `cal-capture-file' for storing captured events."
+(defcustom gnus-calendar-org-capture-headline nil
+  "Target outline in `gnus-calendar-org-capture-file' for storing captured events."
   :type '(repeat string)
-  :group 'ical-event)
+  :group 'gnus-calendar-org-sync)
 
-(defcustom cal-org-template-name "used by gnus-cal2org-sync"
+(defcustom gnus-calendar-org-template-name "used by gnus-cal2org-sync"
   "Org-mode template name."
   :type '(string)
-  :group 'ical-event)
+  :group 'gnus-calendar-org-sync)
 
-(defcustom cal-org-template-key "#"
+(defcustom gnus-calendar-org-template-key "#"
   "Org-mode template hotkey."
-  :type '(char)
-  :group 'ical-event)
+  :type '(string)
+  :group 'gnus-calendar-org-sync)
 
 (defmethod ical-event:org-repeat ((event ical-event))
   "Builds `org-mode' timestamp repeater string for EVENT.
@@ -164,38 +165,38 @@ Returns nil for non-recurring EVENT."
 
 
 (defun gnus-calendar-insinuate-org-templates ()
-  (unless (cl-find-if (lambda (x) (string= (second x) cal-org-template-name))
+  (unless (cl-find-if (lambda (x) (string= (second x) gnus-calendar-org-template-name))
                       org-capture-templates)
     (setq org-capture-templates
-          (append `((,cal-org-template-key
-                     ,cal-org-template-name
+          (append `((,gnus-calendar-org-template-key
+                     ,gnus-calendar-org-template-name
                      entry
-                     (file+olp ,cal-capture-file ,@cal-capture-headline)
+                     (file+olp ,gnus-calendar-org-capture-file ,@gnus-calendar-org-capture-headline)
                      "%i"
                      :immediate-finish t))
                   org-capture-templates))))
 
 (defun gnus-calendar:org-event-save (event)
   (with-temp-buffer
-    (org-capture-string (ical-event->org-entry event) cal-org-template-key)))
+    (org-capture-string (ical-event->org-entry event) gnus-calendar-org-template-key)))
 
 (defun gnus-calendar:org-event-update (event)
-  (gnus-calendar--update-org-event event cal-capture-file))
+  (gnus-calendar--update-org-event event gnus-calendar-org-capture-file))
 
 (defun gnus-calendar:org-event-cancel (event)
-  (gnus-calendar--cancel-org-event event cal-capture-file))
+  (gnus-calendar--cancel-org-event event gnus-calendar-org-capture-file))
 
 (defun gnus-calendar-show-org-entry (event)
-  (gnus-calendar--show-org-event event cal-capture-file))
+  (gnus-calendar--show-org-event event gnus-calendar-org-capture-file))
 
 (defmethod cal-event:sync-to-org ((event ical-event-request))
-  (if (gnus-calendar-org-event-exists-p (ical-event:uid event) cal-capture-file)
+  (if (gnus-calendar-org-event-exists-p (ical-event:uid event) gnus-calendar-org-capture-file)
       (gnus-calendar:org-event-update event)
     (gnus-calendar:org-event-save event)))
 
 (defmethod cal-event:sync-to-org ((event ical-event-cancel))
   (when (gnus-calendar-org-event-exists-p
-         (ical-event:uid event) cal-capture-file)
+         (ical-event:uid event) gnus-calendar-org-capture-file)
     (gnus-calendar:org-event-cancel event)))
 
 

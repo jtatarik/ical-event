@@ -31,12 +31,16 @@
 (require 'gnus-sum)
 
 ;; FIXME: better separate reply/sync functionalities
-;; FIXME: configurable reply temp buffer name
 
-;; (defcustom cal-bufname "*CAL*"
-;;   "Buffer name for displaying calendar event details."
-;;   :type '(string)
-;;   :group 'cal-event)
+(defgroup gnus-calendar nil
+  "Settings for inline display of iCalendar events."
+  :group 'gnus-article
+  :prefix "gnus-calendar")
+
+(defcustom gnus-calendar-reply-bufname "*CAL*"
+  "Buffer used for building iCalendar reply."
+  :type '(string)
+  :group 'gnus-calendar)
 
 
 (defvar gnus-calendar-identities
@@ -121,7 +125,7 @@
             (organizer (ical-event:organizer event)))
 
         (message reply)
-        (with-current-buffer (get-buffer-create "*CAL*")
+        (with-current-buffer (get-buffer-create gnus-calendar-reply-bufname)
           (delete-region (point-min) (point-max))
           (insert reply)
           (gnus-calendar-send-buffer-by-mail (buffer-name) organizer subject))))))
