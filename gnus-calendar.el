@@ -26,7 +26,7 @@
 
 (require 'ical-event)
 (require 'ical-event-reply)
-(require 'gnus-cal2org-sync)
+(require 'gnus-calendar-org)
 (require 'mm-decode)
 (require 'gnus-sum)
 

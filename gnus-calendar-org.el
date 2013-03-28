@@ -1,4 +1,4 @@
-;;; gnus-cal2org-sync.el --- 
+;;; gnus-calendar-org.el --- 
 
 ;; Copyright (C) 2013  Jan Tatarik
 
@@ -29,7 +29,7 @@
 (require 'ical-event)
 
 
-(defgroup gnus-calendar-org-sync nil
+(defgroup gnus-calendar-org nil
   "Settings for Calendar Event gnus/org integration."
   :group 'gnus-calendar
   :prefix "gnus-calendar-org")
@@ -37,22 +37,22 @@
 (defcustom gnus-calendar-org-capture-file nil
   "Target Org file for storing captured calendar events."
   :type '(file)
-  :group 'gnus-calendar-org-sync)
+  :group 'gnus-calendar-org)
 
 (defcustom gnus-calendar-org-capture-headline nil
   "Target outline in `gnus-calendar-org-capture-file' for storing captured events."
   :type '(repeat string)
-  :group 'gnus-calendar-org-sync)
+  :group 'gnus-calendar-org)
 
-(defcustom gnus-calendar-org-template-name "used by gnus-cal2org-sync"
+(defcustom gnus-calendar-org-template-name "used by gnus-calendar-org"
   "Org-mode template name."
   :type '(string)
-  :group 'gnus-calendar-org-sync)
+  :group 'gnus-calendar-org)
 
 (defcustom gnus-calendar-org-template-key "#"
   "Org-mode template hotkey."
   :type '(string)
-  :group 'gnus-calendar-org-sync)
+  :group 'gnus-calendar-org)
 
 (defmethod ical-event:org-repeat ((event ical-event))
   "Builds `org-mode' timestamp repeater string for EVENT.
@@ -201,5 +201,5 @@ Returns nil for non-recurring EVENT."
 
 
 
-(provide 'gnus-cal2org-sync)
-;;; gnus-cal2org-sync.el ends here
+(provide 'gnus-calendar-org)
+;;; gnus-calendar-org.el ends here
