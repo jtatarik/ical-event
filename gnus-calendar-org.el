@@ -181,7 +181,7 @@ Returns nil for non-recurring EVENT."
                   org-capture-templates))
 
     ;; hide the template from interactive template selection list (org-capture)
-    (when (boundp org-capture-templates-contexts)
+    (when (boundp 'org-capture-templates-contexts)
       (push `(,gnus-calendar-org-template-key ((lambda () nil)))
             org-capture-templates-contexts))))
 
