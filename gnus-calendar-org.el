@@ -58,8 +58,8 @@
 
 
 (defmethod ical-event:org-repeat ((event ical-event))
-  "Builds `org-mode' timestamp repeater string for EVENT.
-Returns nil for non-recurring EVENT."
+  "Return `org-mode' timestamp repeater string for recurring EVENT.
+Return nil for non-recurring EVENT."
   (when (ical-event:recurring-p event)
     (let* ((freq-map '(("HOURLY" . "h")
                        ("DAILY" . "d")
@@ -72,7 +72,7 @@ Returns nil for non-recurring EVENT."
         (format "+%s%s" (ical-event:recurring-interval event) org-freq)))))
 
 (defmethod ical-event:org-timestamp ((event ical-event))
-  "Builds `org-mode' timestamp from EVENT start/end dates, and recurrence info."
+  "Build `org-mode' timestamp from EVENT start/end dates and recurrence info."
   (let* ((start (ical-event:start-time event))
          (end (ical-event:end-time event))
          (start-date (format-time-string "%Y-%m-%d %a" start t))
@@ -88,7 +88,7 @@ Returns nil for non-recurring EVENT."
 
 ;; TODO: make the template customizable
 (defmethod ical-event->org-entry ((event ical-event))
-  "Formats new entry from EVENT."
+  "Return string with new `org-mode' entry describing EVENT."
   (with-temp-buffer
     (org-mode)
     (with-slots (organizer summary description location

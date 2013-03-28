@@ -73,8 +73,9 @@
 
 (defun ical-event-reply-from-buffer (buf status identity)
   "Build a calendar event reply for request contained in BUF.
-The reply will have STATUS (accepted, tentative, declined).
-The reply will be composed for attendees matching IDENTITY."
+The reply will have STATUS (`accepted', `tentative' or  `declined').
+The reply will be composed for attendees matching any entry
+on the IDENTITY list."
   (cl-flet ((extract-block (blockname)
               (save-excursion
                 (let ((block-start-re (format "^BEGIN:%s" blockname))

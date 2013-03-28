@@ -79,17 +79,17 @@
   "iCalendar Cancel Event class")
 
 (defmethod ical-event:recurring-p ((event ical-event))
-  "Returns `t' if EVENT is recurring."
+  "Return t if EVENT is recurring."
   (not (null (ical-event:recur event))))
 
 (defmethod ical-event:recurring-freq ((event ical-event))
-  "Returns recurring frequency for EVENT."
+  "Return recurring frequency for EVENT."
   (let ((rrule (ical-event:recur event)))
     (string-match "FREQ=\\([[:alpha:]]+\\)" rrule)
     (match-string 1 rrule)))
 
 (defmethod ical-event:recurring-interval ((event ical-event))
-  "Returns recurring interval for EVENT."
+  "Return recurring interval for EVENT."
   (let ((rrule (ical-event:recur event))
         (default-interval 1))
 
@@ -98,11 +98,11 @@
         default-interval)))
 
 (defmethod ical-event:start-time ((event ical-event))
-  "Returns time value of the EVENT start date."
+  "Return time value of the EVENT start date."
   (date-to-time (ical-event:start event)))
 
 (defmethod ical-event:end-time ((event ical-event))
-  "Returns time value of the EVENT end date."
+  "Return time value of the EVENT end date."
   (date-to-time (ical-event:end event)))
 
 
