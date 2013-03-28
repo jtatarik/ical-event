@@ -86,6 +86,7 @@ Returns nil for non-recurring EVENT."
         (format "<%s %s-%s%s>" start-date start-time end-time repeat)
       (format "<%s %s>--<%s %s>" start-date start-time end-date end-time))))
 
+;; TODO: make the template customizable
 (defmethod ical-event->org-entry ((event ical-event))
   "Formats new entry from EVENT."
   (with-temp-buffer

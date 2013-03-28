@@ -30,7 +30,6 @@
 (require 'mm-decode)
 (require 'gnus-sum)
 
-;; FIXME: better separate reply/sync functionalities
 
 (defgroup gnus-calendar nil
   "Settings for inline display of iCalendar events."
