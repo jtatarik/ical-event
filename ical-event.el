@@ -1,9 +1,9 @@
-;;; ical-event.el --- Calendar Event Object
+;;; ical-event.el --- iCalendar Event Object
 
 ;; Copyright (C) 2013  Jan Tatarik
 
 ;; Author: Jan Tatarik <Jan.Tatarik@gmail.com>
-;; Keywords: calendar
+;; Keywords: icalendar
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -27,85 +27,140 @@
 
 (require 'icalendar)
 (require 'eieio)
-(require 'cl)
+(require 'cl-lib)
 
-(defclass cal-event ()
+(defclass ical-event ()
   ((organizer :initarg :organizer
-              :accessor organizer
+              :accessor ical-event:organizer
               :type string)
    (summary :initarg :summary
             :accessor summary
-            :type string)
+            :initform ""
+            :type (or null string))
    (description :initarg :description
-                :accessor description
-                :type string)
+                :accessor ical-event:description
+                :initform ""
+                :type (or null string))
    (location :initarg :location
-             :accessor location
-             :type string)
+             :accessor ical-event:location
+             :initform ""
+             :type (or null string))
    (start :initarg :start
-          :accessor start
-          :type string)
+          :accessor ical-event:start
+          :initform ""
+          :type (or null string))
    (end :initarg :end
-        :accessor end
-        :type string)
+        :accessor ical-event:end
+        :initform ""
+        :type (or null string))
    (recur :initarg :recur
-          :accessor recur
+          :accessor ical-event:recur
+          :initform ""
           :type (or null string))
    (uid :initarg :uid
-        :accessor uid
+        :accessor ical-event:uid
         :type string)
    (method :initarg :method
-           :accessor method
-           :type string))
-  "iCalendar event class")
+           :accessor ical-event:method
+           :initform "PUBLISH"
+           :type (or null string))
+   (rsvp :initarg :rsvp
+         :accessor ical-event:rsvp
+         :initform nil
+         :type (or null boolean)))
+  "iCalendar Event class")
 
-(defmethod cancel-event-p ((event cal-event))
-  (with-slots (method) event
-    (and method (string= method "CANCEL"))))
+(defclass ical-event-request (ical-event)
+  nil
+  "iCalendar Request Event class")
 
-(defmethod request-event-p ((event cal-event))
-  (with-slots (method) event
-    (and method (string= method "REQUEST"))))
+(defclass ical-event-cancel (ical-event)
+  nil
+  "iCalendar Cancel Event class")
 
-(defmethod recurring-p ((event cal-event))
-  "Returns `t' if EVENT is recurring."
-  (not (null (recur event))))
+(defmethod ical-event:recurring-p ((event ical-event))
+  "Return t if EVENT is recurring."
+  (not (null (ical-event:recur event))))
 
-(defmethod recurring-freq ((event cal-event))
-  "Returns recurring frequency for EVENT."
-  (let ((rrule (recur event)))
+(defmethod ical-event:recurring-freq ((event ical-event))
+  "Return recurring frequency for EVENT."
+  (let ((rrule (ical-event:recur event)))
     (string-match "FREQ=\\([[:alpha:]]+\\)" rrule)
     (match-string 1 rrule)))
 
-(defmethod recurring-interval ((event cal-event))
-  "Returns recurring interval for EVENT."
-  (let ((rrule (recur event))
+(defmethod ical-event:recurring-interval ((event ical-event))
+  "Return recurring interval for EVENT."
+  (let ((rrule (ical-event:recur event))
         (default-interval 1))
 
     (string-match "INTERVAL=\\([[:digit:]]+\\)" rrule)
     (or (match-string 1 rrule)
         default-interval)))
 
-(defmethod start-time ((event cal-event))
-  "Returns time value of the EVENT start date."
-  (date-to-time (start event)))
+(defmethod ical-event:start-time ((event ical-event))
+  "Return time value of the EVENT start date."
+  (date-to-time (ical-event:start event)))
 
-(defmethod end-time ((event cal-event))
-  "Returns time value of the EVENT end date."
-  (date-to-time (end event)))
+(defmethod ical-event:end-time ((event ical-event))
+  "Return time value of the EVENT end date."
+  (date-to-time (ical-event:end event)))
 
-(defun icalendar->ical (ical)
-  (let ((event (car (icalendar--all-events ical)))
-        (prop-map '((organizer . ORGANIZER)
-                    (summary . SUMMARY)
-                    (description . DESCRIPTION)
-                    (location . LOCATION)
-                    (start . DTSTART)
-                    (end . DTEND)
-                    (recur . RRULE)
-                    (uid . UID)))
-        (args (list :method (or (third (assoc 'METHOD (third (car (nreverse ical)))))
-                                "PUBLISH"))))
+
+(defun ical-event--decode-datefield (ical field zone-map &optional date-style)
+  (let* ((calendar-date-style (or date-style 'european))
+         (date (icalendar--get-event-property ical field))
+         (date-zone (icalendar--find-time-zone
+                        (icalendar--get-event-property-attributes
+                         ical field)
+                        zone-map))
+         (date-decoded (icalendar--decode-isodatetime date nil date-zone)))
+
+    (concat (icalendar--datetime-to-iso-date date-decoded "-")
+            " "
+            (icalendar--datetime-to-colontime date-decoded))))
+
+(defun ical-event--find-attendee (ical name-or-email)
+  (let* ((event (car (icalendar--all-events ical)))
+         (event-props (caddr event)))
+    (cl-labels ((attendee-name (att)
+                  (plist-get (cadr att) 'CN))
+                (attendee-email (att)
+                  (replace-regexp-in-string "^.*MAILTO:" "" (caddr att)))
+                (attendee-prop-matches (prop)
+                   (and (eq (car prop) 'ATTENDEE)
+                        (or (member (attendee-name prop) name-or-email)
+                            (let ((att-email (attendee-email prop)))
+                              (cl-find-if (lambda (email)
+                                            (string-match email att-email))
+                                          name-or-email))))))
+
+      (cl-find-if #'attendee-prop-matches event-props))))
+
+
+(defun icalendar->ical-event (ical &optional attendee-name-or-email)
+  (let* ((event (car (icalendar--all-events ical)))
+         (zone-map (icalendar--convert-all-timezones ical))
+         (organizer (replace-regexp-in-string
+                     "^.*MAILTO:" ""
+                     (icalendar--get-event-property event 'ORGANIZER)))
+         (prop-map '((summary . SUMMARY)
+                     (description . DESCRIPTION)
+                     (location . LOCATION)
+                     (recur . RRULE)
+                     (uid . UID)))
+         (method (third (assoc 'METHOD (third (car (nreverse ical))))))
+         (attendee (when attendee-name-or-email
+                     (ical-event--find-attendee ical attendee-name-or-email)))
+         (args (list :method method
+                     :organizer organizer
+                     :start (ical-event--decode-datefield event 'DTSTART zone-map)
+                     :end (ical-event--decode-datefield event 'DTEND zone-map)
+                     :rsvp (string= (plist-get (cadr attendee) 'RSVP)
+                                    "TRUE")))
+         (event-class (pcase method
+                        ("REQUEST" 'ical-event-request)
+                        ("CANCEL" 'ical-event-cancel)
+                        (_ 'ical-event))))
 
     (cl-labels ((map-property (prop)
                               (let ((value (icalendar--get-event-property event prop)))
@@ -125,15 +180,16 @@
                                                       args)))))
 
       (mapc #'accumulate-args prop-map)
-      (apply 'make-instance 'cal-event args))))
+      (apply 'make-instance event-class args))))
 
-(defun ical-from-buffer (buf)
+(defun ical-event-from-buffer (buf &optional attendee-name-or-email)
   (let ((ical (with-current-buffer (icalendar--get-unfolded-buffer (get-buffer buf))
                 (goto-char (point-min))
                 (icalendar--read-element nil nil))))
 
     (when ical
-      (icalendar->ical ical))))
+      (icalendar->ical-event ical attendee-name-or-email))))
+
 
 (provide 'ical-event)
 ;;; ical-event.el ends here
