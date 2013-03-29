@@ -182,7 +182,7 @@ Return nil for non-recurring EVENT."
 
     ;; hide the template from interactive template selection list (org-capture)
     (when (boundp 'org-capture-templates-contexts)
-      (push `(,gnus-calendar-org-template-key ((lambda () nil)))
+      (push `(,gnus-calendar-org-template-key ((lambda () gnus-article-mode)))
             org-capture-templates-contexts))))
 
 (defun gnus-calendar:org-event-save (event)
