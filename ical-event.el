@@ -32,7 +32,8 @@
 (defclass ical-event ()
   ((organizer :initarg :organizer
               :accessor ical-event:organizer
-              :type string)
+              :initform ""
+              :type (or null string))
    (summary :initarg :summary
             :accessor summary
             :initform ""
@@ -142,7 +143,7 @@
          (zone-map (icalendar--convert-all-timezones ical))
          (organizer (replace-regexp-in-string
                      "^.*MAILTO:" ""
-                     (icalendar--get-event-property event 'ORGANIZER)))
+                     (or (icalendar--get-event-property event 'ORGANIZER) "")))
          (prop-map '((summary . SUMMARY)
                      (description . DESCRIPTION)
                      (location . LOCATION)
