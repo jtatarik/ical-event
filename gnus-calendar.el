@@ -102,7 +102,7 @@
 (defun gnus-calendar-send-buffer-by-mail (buffer-name recipient subject)
   (compose-mail)
   (message-goto-body)
-  (mml-attach-buffer buffer-name "text/calendar" nil "attachment")
+  (mml-attach-buffer buffer-name "text/calendar; method=REPLY; charset=UTF-8" nil "inline")
   (message-goto-to)
   (insert recipient)
   (message-goto-subject)
@@ -119,15 +119,20 @@
                                                  status gnus-calendar-identities))))
 
     (when reply
-      (let ((subject (concat (capitalize (symbol-name status))
-                             ": " (summary event)))
-            (organizer (ical-event:organizer event)))
+      (cl-flet ((fold-icalendar-buffer ()
+                  (goto-char (point-min))
+                  (while (re-search-forward "^\\(.\\{72\\}\\)\\(.+\\)$" nil t)
+                    (replace-match "\\1\n \\2")
+                    (goto-char (line-beginning-position)))))
+        (let ((subject (concat (capitalize (symbol-name status))
+                               ": " (summary event)))
+              (organizer (ical-event:organizer event)))
 
-        (message reply)
-        (with-current-buffer (get-buffer-create gnus-calendar-reply-bufname)
-          (delete-region (point-min) (point-max))
-          (insert reply)
-          (gnus-calendar-send-buffer-by-mail (buffer-name) organizer subject))))))
+          (with-current-buffer (get-buffer-create gnus-calendar-reply-bufname)
+            (delete-region (point-min) (point-max))
+            (insert reply)
+            (fold-icalendar-buffer)
+            (gnus-calendar-send-buffer-by-mail (buffer-name) organizer subject)))))))
 
 
 (defun gnus-calendar-mm-inline (handle)
