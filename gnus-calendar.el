@@ -107,8 +107,7 @@
   (insert recipient)
   (message-goto-subject)
   (insert subject)
-  ;(message-send-and-exit)
-  )
+  (message-send-and-exit))
 
 (defun gnus-calendar-reply (data)
   (let* ((handle (first data))
