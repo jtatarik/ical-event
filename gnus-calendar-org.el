@@ -180,10 +180,13 @@ Return nil for non-recurring EVENT."
                      :immediate-finish t))
                   org-capture-templates))
 
-    ;; hide the template from interactive template selection list (org-capture)
-    (when (boundp 'org-capture-templates-contexts)
-      (push `(,gnus-calendar-org-template-key ((lambda () gnus-article-mode)))
-            org-capture-templates-contexts))))
+    ;; hide the template from interactive template selection list
+    ;; (org-capture)
+    ;; NOTE: doesn't work when capturing from string
+    ;; (when (boundp 'org-capture-templates-contexts)
+    ;;   (push `(,gnus-calendar-org-template-key "" ((in-mode . "gnus-article-mode")))
+    ;;         org-capture-templates-contexts))
+    ))
 
 (defun gnus-calendar:org-event-save (event)
   (with-temp-buffer
