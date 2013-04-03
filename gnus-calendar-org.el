@@ -129,18 +129,37 @@ Return nil for non-recurring EVENT."
 
 (defun gnus-calendar--update-org-event (event org-file)
   (with-current-buffer (find-file-noselect org-file)
-    (with-slots (uid description organizer location recur) event
+    (with-slots (uid summary description organizer location recur) event
       (let ((event-pos (org-find-entry-with-id uid)))
         (when event-pos
           (goto-char event-pos)
+
+          ;; update the headline, keep todo, priority and tags, if any
+          (save-excursion
+            (let* ((priority (org-entry-get (point) "PRIORITY"))
+                   (headline (delq nil (list
+                                        (org-entry-get (point) "TODO")
+                                        (when priority (format "[#%s]" priority))
+                                        (format "%s (%s)" summary location)
+                                        (org-entry-get (point) "TAGS")))))
+
+              (re-search-forward "^\\*+ " (line-end-position))
+              (delete-region (point) (line-end-position))
+              (insert (mapconcat #'identity headline " "))))
+
+          ;; update props and description
           (let ((entry-end (org-entry-end-position))
                 (entry-outline-level (org-outline-level)))
-            (forward-line)
-            (re-search-forward "^ *[^: ]" entry-end)
-            (delete-region (point) entry-end)
+
+            (save-restriction
+              (org-narrow-to-element)
+              (forward-line)
+              (re-search-forward "^ *[^: ]" entry-end)
+              (delete-region (point) entry-end))
+
             (save-restriction
               (narrow-to-region (point) (point))
-              (insert description)
+              (insert description "\n")
               (indent-region (point-min) (point-max) (1+ entry-outline-level))
               (fill-region (point-min) (point-max)))
             (org-entry-put event-pos "DT" (ical-event:org-timestamp event))
