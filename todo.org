@@ -23,3 +23,7 @@
 
   - Maybe add menu items and keyboard shortcuts for Accept, Tentative,
     Decline?
+
+  - maybe allow syncing (actually creation of new org entry) from REPLY
+    events. When I send a meeting request from owa, I have no record of it in
+    org yet. If not feasible, don't show sync buttons for replies.
