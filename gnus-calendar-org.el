@@ -36,7 +36,7 @@
 
 (defcustom gnus-calendar-org-capture-file nil
   "Target Org file for storing captured calendar events."
-  :type '(file)
+  :type 'file
   :group 'gnus-calendar-org)
 
 (defcustom gnus-calendar-org-capture-headline nil
