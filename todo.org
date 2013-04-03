@@ -1,0 +1,25 @@
+
+* Features, fixes
+
+  - 'show appt date in calendar' button in the article buffer, to see whether
+    there are already conflicting events in the calendar
+
+  - wrap calendar description lines in the article buffer
+
+  - when updating an org entry, only the properties are updated. The entry
+    title and location should be updated, too
+
+  - In Gnus I can't see that I have Accepted/Tentative'd/Declined an
+    invitation. This would be nice to display - maybe by adding a custom
+    header? Also the A'nswered mark could be set?
+
+  - The reply sent is displayed in Outlook with my signature as an
+    attached file. Maybe the emails generated should simply exclude the
+    signature by default?
+
+  - My colleague then canceled the meeting, but the cancel notification
+    was shown with "Accept"-, "Tentative"-, and "Decline"-buttons, rather
+    than the "Remove from calendar"-button (or no button) I expected.
+
+  - Maybe add menu items and keyboard shortcuts for Accept, Tentative,
+    Decline?
