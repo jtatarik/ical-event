@@ -35,7 +35,7 @@
               :initform ""
               :type (or null string))
    (summary :initarg :summary
-            :accessor summary
+            :accessor ical-event:summary
             :initform ""
             :type (or null string))
    (description :initarg :description

@@ -124,7 +124,7 @@
                     (replace-match "\\1\n \\2")
                     (goto-char (line-beginning-position)))))
         (let ((subject (concat (capitalize (symbol-name status))
-                               ": " (summary event)))
+                               ": " (ical-event:summary event)))
               (organizer (ical-event:organizer event)))
 
           (with-current-buffer (get-buffer-create gnus-calendar-reply-bufname)
