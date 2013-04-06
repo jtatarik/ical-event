@@ -79,6 +79,10 @@
   nil
   "iCalendar Cancel Event class")
 
+(defclass ical-event-reply (ical-event)
+  nil
+  "iCalendar Reply Event class")
+
 (defmethod ical-event:recurring-p ((event ical-event))
   "Return t if EVENT is recurring."
   (not (null (ical-event:recur event))))
@@ -161,6 +165,7 @@
          (event-class (pcase method
                         ("REQUEST" 'ical-event-request)
                         ("CANCEL" 'ical-event-cancel)
+                        ("REPLY" 'ical-event-reply)
                         (_ 'ical-event))))
 
     (cl-labels ((map-property (prop)

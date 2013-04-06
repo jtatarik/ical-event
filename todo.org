@@ -10,9 +10,9 @@
     invitation. This would be nice to display - maybe by adding a custom
     header? Also the A'nswered mark could be set?
 
-  - The reply sent is displayed in Outlook with my signature as an
-    attached file. Maybe the emails generated should simply exclude the
-    signature by default?
+    Not sure about the headers and summary buffer. But as long as the
+    information is kept in the org entry, it is possible to show this in the
+    article buffer.
 
   - My colleague then canceled the meeting, but the cancel notification
     was shown with "Accept"-, "Tentative"-, and "Decline"-buttons, rather

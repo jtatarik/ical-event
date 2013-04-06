@@ -41,6 +41,8 @@
   :type '(string)
   :group 'gnus-calendar)
 
+(make-variable-buffer-local
+ (defvar gnus-calendar-reply-status nil))
 
 (defvar gnus-calendar-identities
   (cl-mapcan (lambda (x) (if (listp x) x (list x)))
@@ -49,14 +51,18 @@
                    gnus-ignored-from-addresses)))
 
 ;; TODO: make the template customizable
-(defmethod ical-event->gnus-calendar ((event ical-event))
+(defmethod ical-event->gnus-calendar ((event ical-event) &optional reply-status)
   "Format an overview of EVENT details."
-  (with-slots (organizer summary description location recur uid method) event
+  (with-slots (organizer summary description location recur uid method rsvp) event
     (let ((headers `(("Summary" ,summary)
                      ("Location" ,location)
                      ("Time" ,(ical-event:org-timestamp event))
                      ("Organizer" ,organizer)
                      ("Method" ,method))))
+
+      (when (and (not (ical-event-reply-p event)) rsvp)
+        (setq headers (append headers
+                              `(("Status" ,(or reply-status "Not replied yet"))))))
 
       (concat
        (apply #'concat (mapcar (lambda (x)
@@ -132,24 +138,43 @@
             (delete-region (point-min) (point-max))
             (insert reply)
             (fold-icalendar-buffer)
-            (gnus-calendar-send-buffer-by-mail (buffer-name) organizer subject)))))))
+            (gnus-calendar-send-buffer-by-mail (buffer-name) organizer subject))
 
+          ;; Back in article buffer
+          (setq-local gnus-calendar-reply-status status))))))
+
+(defun gnus-calendar-sync-event-to-org (event)
+  (cal-event:sync-to-org event gnus-calendar-reply-status))
 
 (defun gnus-calendar-mm-inline (handle)
   (let ((event (ical-event-from-handle handle gnus-calendar-identities))
+        (reply-status "Not replied yet")
         buttons)
 
+    (setq gnus-calendar-reply-status nil)
+
     (when event
-      (when (ical-event:rsvp event)
+      (when (and (not (ical-event-reply-p event))
+                 (ical-event:rsvp event))
+        (when gnus-calendar-org-enabled-p
+          (setq reply-status (or (gnus-calendar:org-event-reply-status event)
+                                 reply-status)))
+
         (setq buttons (append `(("Accept" gnus-calendar-reply (,handle accepted ,event))
                                 ("Tentative" gnus-calendar-reply (,handle tentative ,event))
                                 ("Decline" gnus-calendar-reply (,handle declined ,event)))
                               buttons)))
 
       (when gnus-calendar-org-enabled-p
-        (setq buttons (append buttons
-                              `(("Export to Org" cal-event:sync-to-org ,event)
-                                ("Show Org Entry" gnus-calendar-show-org-entry ,event)))))
+        (let* ((org-entry-exists-p (gnus-calendar:org-entry-exists-p event))
+               (export-button-text (if org-entry-exists-p "Update Org Entry" "Export to Org")))
+
+          (when (ical-event-request-p event)
+            (setq buttons (append buttons
+                                  `((,export-button-text gnus-calendar-sync-event-to-org ,event)))))
+          (when org-entry-exists-p
+            (setq buttons (append buttons
+                                  `(("Show Org Entry" gnus-calendar-show-org-entry ,event)))))))
 
       (when buttons
         (mapc (lambda (x)
@@ -158,7 +183,7 @@
               buttons)
         (insert "\n\n"))
 
-      (insert (ical-event->gnus-calendar event)))))
+      (insert (ical-event->gnus-calendar event reply-status)))))
 
 (defun gnus-calendar-save-part (handle)
   (let (event)

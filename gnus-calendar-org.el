@@ -87,18 +87,21 @@ Return nil for non-recurring EVENT."
       (format "<%s %s>--<%s %s>" start-date start-time end-date end-time))))
 
 ;; TODO: make the template customizable
-(defmethod ical-event->org-entry ((event ical-event))
+(defmethod ical-event->org-entry ((event ical-event) reply-status)
   "Return string with new `org-mode' entry describing EVENT."
   (with-temp-buffer
     (org-mode)
     (with-slots (organizer summary description location
                            recur uid) event
-      (let ((props `(("ICAL_EVENT" . "t")
-                     ("ID" . ,uid)
-                     ("DT" . ,(ical-event:org-timestamp event))
-                     ("ORGANIZER" . ,(ical-event:organizer event))
-                     ("LOCATION" . ,(ical-event:location event))
-                     ("RRULE" . ,(ical-event:recur event)))))
+      (let* ((reply (if reply-status (capitalize (symbol-name reply-status))
+                      "Not replied yet"))
+             (props `(("ICAL_EVENT" . "t")
+                      ("ID" . ,uid)
+                      ("DT" . ,(ical-event:org-timestamp event))
+                      ("ORGANIZER" . ,(ical-event:organizer event))
+                      ("LOCATION" . ,(ical-event:location event))
+                      ("RRULE" . ,(ical-event:recur event))
+                      ("REPLY" . ,reply))))
 
         (insert (format "* %s (%s)\n\n" summary location))
         (mapc (lambda (prop)
@@ -127,7 +130,7 @@ Return nil for non-recurring EVENT."
       (goto-char event-pos)
       (org-show-entry))))
 
-(defun gnus-calendar--update-org-event (event org-file)
+(defun gnus-calendar--update-org-event (event org-file reply-status)
   (with-current-buffer (find-file-noselect org-file)
     (with-slots (uid summary description organizer location recur) event
       (let ((event-pos (org-find-entry-with-id uid)))
@@ -166,6 +169,8 @@ Return nil for non-recurring EVENT."
             (org-entry-put event-pos "ORGANIZER" organizer)
             (org-entry-put event-pos "LOCATION" location)
             (org-entry-put event-pos "RRULE" recur)
+            (when reply-status (org-entry-put event-pos "REPLY"
+                                              (capitalize (symbol-name reply-status))))
             (save-buffer)))))))
 
 (defun gnus-calendar--cancel-org-event (event org-file)
@@ -176,6 +181,14 @@ Return nil for non-recurring EVENT."
           (when ts
             (org-entry-put event-pos "DT" (gnus-calendar--deactivate-org-timestamp ts))
             (save-buffer)))))))
+
+(defun gnus-calendar--get-org-event-reply-status (event org-file)
+  (let ((id (ical-event:uid event)))
+    (when (gnus-calendar-org-event-exists-p id org-file)
+        (save-excursion
+          (with-current-buffer (find-file-noselect org-file)
+            (let ((event-pos (org-find-entry-with-id id)))
+              (org-entry-get event-pos "REPLY")))))))
 
 (defun gnus-calendar-org-event-exists-p (id org-file)
   "Return t when given event ID exists in ORG-FILE."
@@ -207,23 +220,31 @@ Return nil for non-recurring EVENT."
     ;;         org-capture-templates-contexts))
     ))
 
-(defun gnus-calendar:org-event-save (event)
+(defun gnus-calendar:org-event-save (event reply-status)
   (with-temp-buffer
-    (org-capture-string (ical-event->org-entry event) gnus-calendar-org-template-key)))
+    (org-capture-string (ical-event->org-entry event reply-status)
+                        gnus-calendar-org-template-key)))
 
-(defun gnus-calendar:org-event-update (event)
-  (gnus-calendar--update-org-event event gnus-calendar-org-capture-file))
+(defun gnus-calendar:org-event-update (event reply-status)
+  (gnus-calendar--update-org-event event gnus-calendar-org-capture-file reply-status))
 
 (defun gnus-calendar:org-event-cancel (event)
   (gnus-calendar--cancel-org-event event gnus-calendar-org-capture-file))
 
+(defun gnus-calendar:org-entry-exists-p (event)
+  (gnus-calendar-org-event-exists-p (ical-event:uid event)
+                                    gnus-calendar-org-capture-file))
+
 (defun gnus-calendar-show-org-entry (event)
   (gnus-calendar--show-org-event event gnus-calendar-org-capture-file))
 
-(defmethod cal-event:sync-to-org ((event ical-event-request))
+(defun gnus-calendar:org-event-reply-status (event)
+  (gnus-calendar--get-org-event-reply-status event gnus-calendar-org-capture-file))
+
+(defmethod cal-event:sync-to-org ((event ical-event-request) reply-status)
   (if (gnus-calendar-org-event-exists-p (ical-event:uid event) gnus-calendar-org-capture-file)
-      (gnus-calendar:org-event-update event)
-    (gnus-calendar:org-event-save event)))
+      (gnus-calendar:org-event-update event reply-status)
+    (gnus-calendar:org-event-save event reply-status)))
 
 (defmethod cal-event:sync-to-org ((event ical-event-cancel))
   (when (gnus-calendar-org-event-exists-p
