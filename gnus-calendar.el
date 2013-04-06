@@ -107,14 +107,14 @@
 
 (defun gnus-calendar-send-buffer-by-mail (buffer-name recipient subject)
   (let ((message-signature nil))
-    (compose-mail)
-    (message-goto-body)
-    (mml-attach-buffer buffer-name "text/calendar; method=REPLY; charset=UTF-8" nil "inline")
-    (message-goto-to)
-    (insert recipient)
-    (message-goto-subject)
-    (insert subject)
-    (message-send-and-exit)))
+    (with-current-buffer gnus-summary-buffer
+      (gnus-summary-reply)
+      (message-goto-body)
+      (mml-attach-buffer buffer-name "text/calendar; method=REPLY; charset=UTF-8" nil "inline")
+      (message-goto-subject)
+      (delete-region (line-beginning-position) (line-end-position))
+      (insert "Subject: " subject)
+      (message-send-and-exit))))
 
 (defun gnus-calendar-reply (data)
   (let* ((handle (first data))
@@ -141,7 +141,9 @@
             (gnus-calendar-send-buffer-by-mail (buffer-name) organizer subject))
 
           ;; Back in article buffer
-          (setq-local gnus-calendar-reply-status status))))))
+          (setq-local gnus-calendar-reply-status status)
+          (when gnus-calendar-org-enabled-p
+            (gnus-calendar:org-event-update event status)))))))
 
 (defun gnus-calendar-sync-event-to-org (event)
   (cal-event:sync-to-org event gnus-calendar-reply-status))
