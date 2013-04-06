@@ -14,10 +14,6 @@
     information is kept in the org entry, it is possible to show this in the
     article buffer.
 
-  - My colleague then canceled the meeting, but the cancel notification
-    was shown with "Accept"-, "Tentative"-, and "Decline"-buttons, rather
-    than the "Remove from calendar"-button (or no button) I expected.
-
   - Maybe add menu items and keyboard shortcuts for Accept, Tentative,
     Decline?
 

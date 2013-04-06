@@ -1,7 +1,8 @@
 ical-event
 ==========
 
-Sync iCal event invitations from Gnus to Org agenda.
+Accept/Decline iCalendar appointment invitations from Gnus.
+Sync iCalendar event invitations from Gnus to Org agenda.
 
 Setup
 =====
