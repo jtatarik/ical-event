@@ -44,6 +44,12 @@
 (make-variable-buffer-local
  (defvar gnus-calendar-reply-status nil))
 
+(make-variable-buffer-local
+ (defvar gnus-calendar-event nil))
+
+(make-variable-buffer-local
+ (defvar gnus-calendar-handle nil))
+
 (defvar gnus-calendar-identities
   (cl-mapcan (lambda (x) (if (listp x) x (list x)))
              (list user-full-name (regexp-quote user-mail-address)
@@ -90,6 +96,8 @@
       (ical-event-from-buffer (current-buffer) attendee-name-or-email)))
 
 (defun gnus-calendar-insert-button (text callback data)
+  ;; FIXME: the gnus-mime-button-map keymap does not make sense for this kind
+  ;; of button.
   (let ((start (point)))
     (gnus-add-text-properties
      start
@@ -105,7 +113,7 @@
                            :action 'gnus-widget-press-button
                            :button-keymap gnus-widget-button-keymap)))
 
-(defun gnus-calendar-send-buffer-by-mail (buffer-name recipient subject)
+(defun gnus-calendar-send-buffer-by-mail (buffer-name subject)
   (let ((message-signature nil))
     (with-current-buffer gnus-summary-buffer
       (gnus-summary-reply)
@@ -131,19 +139,21 @@
                     (replace-match "\\1\n \\2")
                     (goto-char (line-beginning-position)))))
         (let ((subject (concat (capitalize (symbol-name status))
-                               ": " (ical-event:summary event)))
-              (organizer (ical-event:organizer event)))
+                               ": " (ical-event:summary event))))
 
           (with-current-buffer (get-buffer-create gnus-calendar-reply-bufname)
             (delete-region (point-min) (point-max))
             (insert reply)
             (fold-icalendar-buffer)
-            (gnus-calendar-send-buffer-by-mail (buffer-name) organizer subject))
+            (gnus-calendar-send-buffer-by-mail (buffer-name) subject))
 
           ;; Back in article buffer
           (setq-local gnus-calendar-reply-status status)
           (when gnus-calendar-org-enabled-p
-            (gnus-calendar:org-event-update event status)))))))
+            (gnus-calendar:org-event-update event status)
+            ;; refresh article buffer to update the reply status
+            (with-current-buffer gnus-summary-buffer
+              (gnus-summary-show-article))))))))
 
 (defun gnus-calendar-sync-event-to-org (event)
   (cal-event:sync-to-org event gnus-calendar-reply-status))
@@ -185,6 +195,8 @@
               buttons)
         (insert "\n\n"))
 
+      (setq gnus-calendar-event event
+            gnus-calendar-handle handle)
       (insert (ical-event->gnus-calendar event reply-status)))))
 
 (defun gnus-calendar-save-part (handle)
@@ -203,10 +215,43 @@
     (when data
       (gnus-calendar-save-part data))))
 
+(defun gnus-calendar-reply-accept ()
+  (interactive)
+  (with-current-buffer gnus-article-buffer
+    (gnus-calendar-reply (list gnus-calendar-handle 'accepted gnus-calendar-event))))
+
+(defun gnus-calendar-reply-tentative ()
+  (interactive)
+  (with-current-buffer gnus-article-buffer
+    (gnus-calendar-reply (list gnus-calendar-handle 'tentative gnus-calendar-event))))
+
+(defun gnus-calendar-reply-decline ()
+  (interactive)
+  (with-current-buffer gnus-article-buffer
+    (gnus-calendar-reply (list gnus-calendar-handle 'declined gnus-calendar-event))))
+
+(defun gnus-calendar-event-export ()
+  (interactive)
+  (with-current-buffer gnus-article-buffer
+    (gnus-calendar-sync-event-to-org gnus-calendar-event)))
+
+(defun gnus-calendar-event-show ()
+  (interactive)
+  (gnus-calendar-show-org-entry
+   (with-current-buffer gnus-article-buffer
+     gnus-calendar-event)))
+
 (defun gnus-calendar-setup ()
   (add-to-list 'mm-inlined-types "text/calendar")
   (add-to-list 'mm-automatic-display "text/calendar")
   (add-to-list 'mm-inline-media-tests '("text/calendar" gnus-calendar-mm-inline identity))
+
+  (gnus-define-keys (gnus-summary-calendar-map "i" gnus-summary-mode-map)
+    "a" gnus-calendar-reply-accept
+    "t" gnus-calendar-reply-tentative
+    "d" gnus-calendar-reply-decline
+    "e" gnus-calendar-event-export
+    "s" gnus-calendar-event-show)
 
   (require 'gnus-art)
   (add-to-list 'gnus-mime-action-alist
