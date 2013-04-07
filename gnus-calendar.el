@@ -216,26 +216,31 @@
       (gnus-calendar-save-part data))))
 
 (defun gnus-calendar-reply-accept ()
+  "Accept invitation in the current article."
   (interactive)
   (with-current-buffer gnus-article-buffer
     (gnus-calendar-reply (list gnus-calendar-handle 'accepted gnus-calendar-event))))
 
 (defun gnus-calendar-reply-tentative ()
+  "Send tentative response to invitation in the current article."
   (interactive)
   (with-current-buffer gnus-article-buffer
     (gnus-calendar-reply (list gnus-calendar-handle 'tentative gnus-calendar-event))))
 
 (defun gnus-calendar-reply-decline ()
+  "Decline invitation in the current article."
   (interactive)
   (with-current-buffer gnus-article-buffer
     (gnus-calendar-reply (list gnus-calendar-handle 'declined gnus-calendar-event))))
 
 (defun gnus-calendar-event-export ()
+  "Export calendar event to `org-mode', or update existing agenda entry."
   (interactive)
   (with-current-buffer gnus-article-buffer
     (gnus-calendar-sync-event-to-org gnus-calendar-event)))
 
 (defun gnus-calendar-event-show ()
+  "Display `org-mode' agenda entry related to the calendar event."
   (interactive)
   (gnus-calendar-show-org-entry
    (with-current-buffer gnus-article-buffer
