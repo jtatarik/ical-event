@@ -96,6 +96,8 @@
       (ical-event-from-buffer (current-buffer) attendee-name-or-email)))
 
 (defun gnus-calendar-insert-button (text callback data)
+  ;; FIXME: the gnus-mime-button-map keymap does not make sense for this kind
+  ;; of button.
   (let ((start (point)))
     (gnus-add-text-properties
      start
