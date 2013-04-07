@@ -214,27 +214,27 @@
     (when data
       (gnus-calendar-save-part data))))
 
-(defun accept ()
+(defun gnus-calendar-reply-accept ()
   (interactive)
   (with-current-buffer gnus-article-buffer
-    (gnus-calendar-reply (list gnus-calendar-handle 'accept gnus-calendar-event))))
+    (gnus-calendar-reply (list gnus-calendar-handle 'accepted gnus-calendar-event))))
 
-(defun tentative ()
+(defun gnus-calendar-reply-tentative ()
   (interactive)
   (with-current-buffer gnus-article-buffer
     (gnus-calendar-reply (list gnus-calendar-handle 'tentative gnus-calendar-event))))
 
-(defun decline ()
+(defun gnus-calendar-reply-decline ()
   (interactive)
   (with-current-buffer gnus-article-buffer
-    (gnus-calendar-reply (list gnus-calendar-handle 'decline gnus-calendar-event))))
+    (gnus-calendar-reply (list gnus-calendar-handle 'declined gnus-calendar-event))))
 
-(defun export ()
+(defun gnus-calendar-event-export ()
   (interactive)
   (with-current-buffer gnus-article-buffer
     (gnus-calendar-sync-event-to-org gnus-calendar-event)))
 
-(defun show ()
+(defun gnus-calendar-event-show ()
   (interactive)
   (gnus-calendar-show-org-entry
    (with-current-buffer gnus-article-buffer
@@ -246,11 +246,11 @@
   (add-to-list 'mm-inline-media-tests '("text/calendar" gnus-calendar-mm-inline identity))
 
   (gnus-define-keys (gnus-summary-calendar-map "i" gnus-summary-mode-map)
-    "a" accept
-    "t" tentative
-    "d" decline
-    "e" export
-    "s" show)
+    "a" gnus-calendar-reply-accept
+    "t" gnus-calendar-reply-tentative
+    "d" gnus-calendar-reply-decline
+    "e" gnus-calendar-event-export
+    "s" gnus-calendar-event-show)
 
   (require 'gnus-art)
   (add-to-list 'gnus-mime-action-alist
