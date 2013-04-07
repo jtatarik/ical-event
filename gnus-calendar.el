@@ -148,7 +148,9 @@
           ;; Back in article buffer
           (setq-local gnus-calendar-reply-status status)
           (when gnus-calendar-org-enabled-p
-            (gnus-calendar:org-event-update event status)))))))
+            (gnus-calendar:org-event-update event status)
+            (with-current-buffer gnus-summary-buffer
+              (gnus-summary-show-article))))))))
 
 (defun gnus-calendar-sync-event-to-org (event)
   (cal-event:sync-to-org event gnus-calendar-reply-status))
