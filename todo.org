@@ -13,6 +13,3 @@
     Not sure about the headers and summary buffer. But as long as the
     information is kept in the org entry, it is possible to show this in the
     article buffer.
-
-  - Maybe add menu items and keyboard shortcuts for Accept, Tentative,
-    Decline?
