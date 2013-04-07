@@ -225,6 +225,17 @@
   (with-current-buffer gnus-article-buffer
     (gnus-calendar-reply (list gnus-calendar-handle 'decline gnus-calendar-event))))
 
+(defun export ()
+  (interactive)
+  (with-current-buffer gnus-article-buffer
+    (gnus-calendar-sync-event-to-org gnus-calendar-event)))
+
+(defun show ()
+  (interactive)
+  (gnus-calendar-show-org-entry
+   (with-current-buffer gnus-article-buffer
+     gnus-calendar-event)))
+
 (defun gnus-calendar-setup ()
   (add-to-list 'mm-inlined-types "text/calendar")
   (add-to-list 'mm-automatic-display "text/calendar")
@@ -233,7 +244,9 @@
   (gnus-define-keys (gnus-summary-calendar-map "i" gnus-summary-mode-map)
     "a" accept
     "t" tentative
-    "d" decline)
+    "d" decline
+    "e" export
+    "s" show)
 
   (require 'gnus-art)
   (add-to-list 'gnus-mime-action-alist
