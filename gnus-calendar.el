@@ -161,7 +161,8 @@
 (defun gnus-calendar-mm-inline (handle)
   (let ((event (ical-event-from-handle handle gnus-calendar-identities))
         (reply-status "Not replied yet")
-        buttons)
+        reply-buttons
+        org-buttons)
 
     (setq gnus-calendar-reply-status nil)
 
@@ -172,28 +173,35 @@
           (setq reply-status (or (gnus-calendar:org-event-reply-status event)
                                  reply-status)))
 
-        (setq buttons (append `(("Accept" gnus-calendar-reply (,handle accepted ,event))
-                                ("Tentative" gnus-calendar-reply (,handle tentative ,event))
-                                ("Decline" gnus-calendar-reply (,handle declined ,event)))
-                              buttons)))
+        (setq reply-buttons
+              `(("Accept" gnus-calendar-reply (,handle accepted ,event))
+                ("Tentative" gnus-calendar-reply (,handle tentative ,event))
+                ("Decline" gnus-calendar-reply (,handle declined ,event)))))
 
       (when gnus-calendar-org-enabled-p
         (let* ((org-entry-exists-p (gnus-calendar:org-entry-exists-p event))
                (export-button-text (if org-entry-exists-p "Update Org Entry" "Export to Org")))
 
+          (setq org-buttons (append org-buttons
+                                `(("Show Agenda" gnus-calendar-show-org-agenda ,event))))
+
           (when (ical-event-request-p event)
-            (setq buttons (append buttons
+            (setq org-buttons (append org-buttons
                                   `((,export-button-text gnus-calendar-sync-event-to-org ,event)))))
           (when org-entry-exists-p
-            (setq buttons (append buttons
+            (setq org-buttons (append org-buttons
                                   `(("Show Org Entry" gnus-calendar-show-org-entry ,event)))))))
 
-      (when buttons
-        (mapc (lambda (x)
-                (apply 'gnus-calendar-insert-button x)
-                (insert "    "))
-              buttons)
-        (insert "\n\n"))
+      (cl-flet ((insert-button-group (buttons)
+                  (when buttons
+                    (mapc (lambda (x)
+                            (apply 'gnus-calendar-insert-button x)
+                            (insert "    "))
+                          buttons)
+                    (insert "\n\n"))))
+
+        (insert-button-group reply-buttons)
+        (insert-button-group org-buttons))
 
       (setq gnus-calendar-event event
             gnus-calendar-handle handle)
@@ -219,25 +227,32 @@
   "Accept invitation in the current article."
   (interactive)
   (with-current-buffer gnus-article-buffer
-    (gnus-calendar-reply (list gnus-calendar-handle 'accepted gnus-calendar-event))))
+    (gnus-calendar-reply (list gnus-calendar-handle 'accepted gnus-calendar-event))
+    (setq-local gnus-calendar-reply-status 'accepted)))
 
 (defun gnus-calendar-reply-tentative ()
   "Send tentative response to invitation in the current article."
   (interactive)
   (with-current-buffer gnus-article-buffer
-    (gnus-calendar-reply (list gnus-calendar-handle 'tentative gnus-calendar-event))))
+    (gnus-calendar-reply (list gnus-calendar-handle 'tentative gnus-calendar-event))
+    (setq-local gnus-calendar-reply-status 'tentative)))
 
 (defun gnus-calendar-reply-decline ()
   "Decline invitation in the current article."
   (interactive)
   (with-current-buffer gnus-article-buffer
-    (gnus-calendar-reply (list gnus-calendar-handle 'declined gnus-calendar-event))))
+    (gnus-calendar-reply (list gnus-calendar-handle 'declined gnus-calendar-event))
+    (setq-local gnus-calendar-reply-status 'declined)))
 
 (defun gnus-calendar-event-export ()
   "Export calendar event to `org-mode', or update existing agenda entry."
   (interactive)
   (with-current-buffer gnus-article-buffer
-    (gnus-calendar-sync-event-to-org gnus-calendar-event)))
+    (gnus-calendar-sync-event-to-org gnus-calendar-event))
+  ;; refresh article buffer in case the reply had been sent before initial org
+  ;; export
+  (with-current-buffer gnus-summary-buffer
+    (gnus-summary-show-article)))
 
 (defun gnus-calendar-event-show ()
   "Display `org-mode' agenda entry related to the calendar event."
@@ -245,6 +260,12 @@
   (gnus-calendar-show-org-entry
    (with-current-buffer gnus-article-buffer
      gnus-calendar-event)))
+
+(defun gnus-calendar-event-check-agenda ()
+  "Display `org-mode' agenda for days between event start and end dates."
+  (interactive)
+  (gnus-calendar-show-org-agenda
+   (with-current-buffer gnus-article-buffer gnus-calendar-event)))
 
 (defun gnus-calendar-setup ()
   (add-to-list 'mm-inlined-types "text/calendar")
@@ -255,6 +276,7 @@
     "a" gnus-calendar-reply-accept
     "t" gnus-calendar-reply-tentative
     "d" gnus-calendar-reply-decline
+    "c" gnus-calendar-event-check-agenda
     "e" gnus-calendar-event-export
     "s" gnus-calendar-event-show)
 

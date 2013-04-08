@@ -1,9 +1,6 @@
 
 * Features, fixes
 
-  - 'show appt date in calendar' button in the article buffer, to see whether
-    there are already conflicting events in the calendar
-
   - wrap calendar description lines in the article buffer
 
   - In Gnus I can't see that I have Accepted/Tentative'd/Declined an
@@ -13,3 +10,6 @@
     Not sure about the headers and summary buffer. But as long as the
     information is kept in the org entry, it is possible to show this in the
     article buffer.
+
+  - When finding an event in org, we should consider all org files to allow
+    for events to be refiled

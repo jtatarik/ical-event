@@ -238,6 +238,16 @@ Return nil for non-recurring EVENT."
 (defun gnus-calendar-show-org-entry (event)
   (gnus-calendar--show-org-event event gnus-calendar-org-capture-file))
 
+(defun gnus-calendar-show-org-agenda (event)
+  (with-slots (start end) event
+    (let* ((time-delta (time-subtract (date-to-time end)
+                                      (date-to-time start)))
+           (duration-days (1+ (/ (+ (* (first time-delta) (expt 2 16))
+                                    (second time-delta))
+                                 86400))))
+
+      (org-agenda-list nil start duration-days))))
+
 (defun gnus-calendar:org-event-reply-status (event)
   (gnus-calendar--get-org-event-reply-status event gnus-calendar-org-capture-file))
 
