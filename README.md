@@ -4,6 +4,17 @@ ical-event
 Accept/Decline iCalendar appointment invitations from Gnus.
 Sync iCalendar event invitations from Gnus to Org agenda.
 
+Status
+======
+
+This code works and so I'm trying to get it merged into Gnus proper. That
+means I will not implement any new features here.
+
+You're invited to look at
+https://github.com/jtatarik/gnus/blob/icalendar/lisp/gnus-icalendar.el, where
+I'm working to make the code acceptable for inclusion in Gnus.
+
+
 Setup
 =====
 
