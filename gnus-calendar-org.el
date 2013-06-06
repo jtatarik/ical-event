@@ -108,11 +108,12 @@ Return nil for non-recurring EVENT."
                 (org-entry-put (point) (car prop) (cdr prop)))
               props))
 
-      (save-restriction
-        (narrow-to-region (point) (point))
-        (if description (insert description))
-        (indent-region (point-min) (point-max) 2)
-        (fill-region (point-min) (point-max)))
+      (when description
+        (save-restriction
+          (narrow-to-region (point) (point))
+          (insert description)
+          (indent-region (point-min) (point-max) 2)
+          (fill-region (point-min) (point-max))))
 
       (buffer-string))))
 
@@ -160,11 +161,12 @@ Return nil for non-recurring EVENT."
               (re-search-forward "^ *[^: ]" entry-end)
               (delete-region (point) entry-end))
 
-            (save-restriction
-              (narrow-to-region (point) (point))
-              (insert description "\n")
-              (indent-region (point-min) (point-max) (1+ entry-outline-level))
-              (fill-region (point-min) (point-max)))
+            (when description
+              (save-restriction
+                (narrow-to-region (point) (point))
+                (insert description "\n")
+                (indent-region (point-min) (point-max) (1+ entry-outline-level))
+                (fill-region (point-min) (point-max))))
             (org-entry-put event-pos "DT" (ical-event:org-timestamp event))
             (org-entry-put event-pos "ORGANIZER" organizer)
             (org-entry-put event-pos "LOCATION" location)
