@@ -110,7 +110,7 @@ Return nil for non-recurring EVENT."
 
       (save-restriction
         (narrow-to-region (point) (point))
-        (insert description)
+        (if description (insert description))
         (indent-region (point-min) (point-max) 2)
         (fill-region (point-min) (point-max)))
 
