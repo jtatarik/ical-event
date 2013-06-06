@@ -118,7 +118,10 @@
     (with-current-buffer gnus-summary-buffer
       (gnus-summary-reply)
       (message-goto-body)
-      (mml-attach-buffer buffer-name "text/calendar; method=REPLY; charset=UTF-8" nil "inline")
+      (insert "<#multipart type=alternative>\n")
+      (mml-insert-empty-tag 'part 'type "text/html")
+      (mml-attach-buffer buffer-name "text/calendar; method=REPLY; charset=UTF-8")
+      (insert "\n<#/multipart>\n")
       (message-goto-subject)
       (delete-region (line-beginning-position) (line-end-position))
       (insert "Subject: " subject)
